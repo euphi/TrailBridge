@@ -1,4 +1,4 @@
-package com.euphi.bikenavrelay;
+package com.euphi.trailbridge;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;

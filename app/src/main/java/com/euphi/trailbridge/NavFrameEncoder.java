@@ -1,4 +1,4 @@
-package com.euphi.bikenavrelay;
+package com.euphi.trailbridge;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;

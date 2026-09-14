@@ -1,4 +1,4 @@
-# BikeNavRelay
+# TrailBridge
 
 Ersetzt Komoots eingestellten BLE-Navigationsdienst für den
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) durch OsmAnd.
@@ -49,7 +49,7 @@ und den Import-Fix erneut anwenden.
   Beim allerersten Kontakt wird die App als *deaktiviert* registriert und
   `registerForNavigationUpdates` liefert einen negativen Wert zurück -- das
   ist der Normalfall beim ersten Start, kein Fehler. Erst nachdem du in
-  OsmAnd unter **Menü > Plugins > BikeNavRelay > aktivieren** eingeschaltet
+  OsmAnd unter **Menü > Plugins > TrailBridge > aktivieren** eingeschaltet
   hast, klappt die Anmeldung (auf "Erneut versuchen" tippen, kein Neustart
   von OsmAnd nötig).
 - `registerForNavigationUpdates(...)` liefert per Push `ADirectionInfo`
@@ -115,7 +115,7 @@ und den Import-Fix erneut anwenden.
    ```
 5. **Bauen:**
    ```
-   cd BikeNavRelay
+   cd TrailBridge
    gradle assembleDebug
    ```
    APK liegt danach unter `app/build/outputs/apk/debug/app-debug.apk`.
@@ -128,10 +128,10 @@ und den Import-Fix erneut anwenden.
 ## Testen
 
 1. OsmAnd installieren, Offline-Karte für deine Gegend laden.
-2. BikeNavRelay installieren und öffnen -> Status zeigt
+2. TrailBridge installieren und öffnen -> Status zeigt
    "NICHT FREIGESCHALTET -- in OsmAnd: Menü > Plugins > ...".
-3. In OsmAnd: Menü > Plugins > BikeNavRelay > aktivieren.
-4. Zurück zu BikeNavRelay, "Erneut versuchen" antippen -> Status wird
+3. In OsmAnd: Menü > Plugins > TrailBridge > aktivieren.
+4. Zurück zu TrailBridge, "Erneut versuchen" antippen -> Status wird
    "verbunden, warte auf Navigationsdaten".
 5. In OsmAnd eine Route starten (Ziel wählen, "Los") -> die Textausgabe
    sollte sich binnen ~1s füllen: Manöver, Distanz, Straßenname,

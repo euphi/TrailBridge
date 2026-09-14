@@ -1,4 +1,4 @@
-package com.euphi.bikenavrelay;
+package com.euphi.trailbridge;
 
 import android.Manifest;
 import android.content.ComponentName;
@@ -28,7 +28,7 @@ import java.util.List;
  * die Characteristic 7473da02-... lässt sich abonnieren (Indicate) und lesen.
  *
  * Die eigentliche Arbeit (OsmAnd-Anbindung + GATT-Server) macht
- * {@link BikeNavRelayService} als Foreground Service, damit sie beim Sperren
+ * {@link TrailBridgeService} als Foreground Service, damit sie beim Sperren
  * des Bildschirms weiterläuft -- diese Activity bindet sich nur noch dran,
  * um den Status anzuzeigen.
  *
@@ -37,7 +37,7 @@ import java.util.List;
  *  2. Diese App öffnen -> ggf. Bluetooth-/Benachrichtigungs-Berechtigungen
  *     erlauben (Android 12+ bzw. 13+).
  *  3. OsmAnd-Status zeigt "NICHT FREIGESCHALTET" -> in OsmAnd: Menü > Plugins
- *     > BikeNavRelay > aktivieren -> hier "Erneut versuchen" antippen.
+ *     > TrailBridge > aktivieren -> hier "Erneut versuchen" antippen.
  *  4. BLE-Status sollte "Advertising, 0 Abonnenten" zeigen (oder einen Fehler,
  *     falls das Gerät keine Peripheral-Rolle kann -- siehe README).
  *  5. In OsmAnd eine Route starten -> Textausgabe füllt sich, UND bei
@@ -45,7 +45,7 @@ import java.util.List;
  *     geschickt (in nRF Connect am Log sichtbar) -- auch bei gesperrtem
  *     Bildschirm, solange der Dienst in der Benachrichtigungsleiste läuft.
  */
-public class MainActivity extends AppCompatActivity implements BikeNavRelayService.UiListener {
+public class MainActivity extends AppCompatActivity implements TrailBridgeService.UiListener {
 
     private static final int REQUEST_BLE_PERMISSIONS = 1001;
 
@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements BikeNavRelayServi
     private TextView bleStatusView;
     private TextView navStateView;
 
-    @Nullable private BikeNavRelayService service;
+    @Nullable private TrailBridgeService service;
     private boolean bound = false;
 
     @Override
@@ -116,8 +116,8 @@ public class MainActivity extends AppCompatActivity implements BikeNavRelayServi
     }
 
     private void startAndBindService() {
-        BikeNavRelayService.start(this);
-        bindService(new Intent(this, BikeNavRelayService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        TrailBridgeService.start(this);
+        bindService(new Intent(this, TrailBridgeService.class), serviceConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -142,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements BikeNavRelayServi
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder binder) {
-            service = ((BikeNavRelayService.LocalBinder) binder).getService();
+            service = ((TrailBridgeService.LocalBinder) binder).getService();
             bound = true;
             service.setUiListener(MainActivity.this);
         }
@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements BikeNavRelayServi
         }
     };
 
-    // ---- BikeNavRelayService.UiListener ----
+    // ---- TrailBridgeService.UiListener ----
 
     @Override
     public void onStatusChanged(String status) {

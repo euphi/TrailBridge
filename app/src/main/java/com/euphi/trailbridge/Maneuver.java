@@ -1,4 +1,4 @@
-package com.euphi.bikenavrelay;
+package com.euphi.trailbridge;
 
 /**
  * Our own maneuver codes for the BikeComputer protocol.
@@ -6,7 +6,7 @@ package com.euphi.bikenavrelay;
  * Deliberately NOT the same numbering as Komoot's old icon table (0..31 into
  * NavImgTable) or as OsmAnd's internal net.osmand.router.TurnType constants.
  * Both of those are implementation details of systems we don't control; this
- * enum is the contract between BikeNavRelay (this app) and the firmware, so
+ * enum is the contract between TrailBridge (this app) and the firmware, so
  * it gets to be exactly as detailed as we need and no more.
  *
  * The firmware side maps these onto its own icon table.

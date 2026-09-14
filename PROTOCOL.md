@@ -1,4 +1,4 @@
-# BikeNavRelay BLE-Protokoll v1
+# TrailBridge BLE-Protokoll v1
 
 ## BLE-Rollen
 

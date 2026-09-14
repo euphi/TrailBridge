@@ -1,4 +1,4 @@
-package com.euphi.bikenavrelay;
+package com.euphi.trailbridge;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -175,7 +175,7 @@ public class OsmAndLink {
                 // This is the expected result on first contact -- see class
                 // javadoc: OsmAnd registers unknown callers as disabled.
                 setStatus("NICHT FREIGESCHALTET -- in OsmAnd: Menü > Plugins > "
-                        + "BikeNavRelay > aktivieren, dann diese App neu starten");
+                        + "TrailBridge > aktivieren, dann diese App neu starten");
             }
         } catch (Exception e) {
             subscribed = false;

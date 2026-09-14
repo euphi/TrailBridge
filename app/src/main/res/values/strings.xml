@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BikeNavRelay</string>
+    <string name="app_name">TrailBridge</string>
     <string name="status_initial">Starte …</string>
     <string name="navstate_initial">(noch keine Navigationsdaten)</string>
     <string name="retry_button">Erneut versuchen</string>

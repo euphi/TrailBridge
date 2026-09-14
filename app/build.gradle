@@ -3,15 +3,15 @@ plugins {
 }
 
 android {
-    namespace 'com.euphi.bikenavrelay'
+    namespace 'com.euphi.trailbridge'
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.euphi.bikenavrelay"
+        applicationId "com.euphi.trailbridge"
         minSdk 26
         targetSdk 35
         versionCode 1
-        versionName "0.2-milestone2"
+        versionName "0.3-trailbridge"
     }
 
     buildFeatures {

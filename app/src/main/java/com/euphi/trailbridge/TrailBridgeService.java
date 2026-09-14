@@ -1,4 +1,4 @@
-package com.euphi.bikenavrelay;
+package com.euphi.trailbridge;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -26,7 +26,7 @@ import androidx.core.app.NotificationCompat;
  * bekommen; der Service selbst laeuft als Foreground Service mit
  * Dauerbenachrichtigung weiter, auch wenn keine Activity gebunden ist.
  */
-public class BikeNavRelayService extends Service
+public class TrailBridgeService extends Service
         implements OsmAndLink.Listener, BikeComputerGattServer.Listener {
 
     public interface UiListener {
@@ -36,8 +36,8 @@ public class BikeNavRelayService extends Service
         void onBleError(String message);
     }
 
-    public static final String ACTION_STOP = "com.euphi.bikenavrelay.action.STOP";
-    private static final String CHANNEL_ID = "bikenavrelay_running";
+    public static final String ACTION_STOP = "com.euphi.trailbridge.action.STOP";
+    private static final String CHANNEL_ID = "trailbridge_running";
     private static final int NOTIFICATION_ID = 1;
 
     private final IBinder binder = new LocalBinder();
@@ -46,7 +46,7 @@ public class BikeNavRelayService extends Service
     private BikeComputerGattServer gattServer;
     @Nullable private UiListener uiListener;
 
-    // MainActivity ruft BikeNavRelayService.start() bei jedem onStart() auf
+    // MainActivity ruft TrailBridgeService.start() bei jedem onStart() auf
     // (auch wenn der Service laengst laeuft, z.B. nach Bildschirm an/aus)
     // -- onStartCommand() muss daher idempotent sein, sonst startet
     // osmAndLink.start()/gattServer.start() ein zweites Mal auf demselben
@@ -62,8 +62,8 @@ public class BikeNavRelayService extends Service
     @Nullable private String lastBleError;
 
     public class LocalBinder extends Binder {
-        BikeNavRelayService getService() {
-            return BikeNavRelayService.this;
+        TrailBridgeService getService() {
+            return TrailBridgeService.this;
         }
     }
 
@@ -156,19 +156,19 @@ public class BikeNavRelayService extends Service
 
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID, "BikeNavRelay aktiv", NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Zeigt an, dass BikeNavRelay im Hintergrund Navigationsdaten an den BikeComputer weiterleitet.");
+                CHANNEL_ID, "TrailBridge aktiv", NotificationManager.IMPORTANCE_LOW);
+        channel.setDescription("Zeigt an, dass TrailBridge im Hintergrund Navigationsdaten an den BikeComputer weiterleitet.");
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(channel);
     }
 
     private void startForegroundNotification() {
-        Intent stopIntent = new Intent(this, BikeNavRelayService.class).setAction(ACTION_STOP);
+        Intent stopIntent = new Intent(this, TrailBridgeService.class).setAction(ACTION_STOP);
         PendingIntent stopPendingIntent = PendingIntent.getService(
                 this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("BikeNavRelay aktiv")
+                .setContentTitle("TrailBridge aktiv")
                 .setContentText("Leitet OsmAnd-Navigation per BLE an den BikeComputer weiter")
                 .setSmallIcon(R.drawable.ic_notification)
                 .setOngoing(true)
@@ -186,7 +186,7 @@ public class BikeNavRelayService extends Service
     // ---- Hilfsfunktion fuer MainActivity ----
 
     public static void start(Context context) {
-        Intent intent = new Intent(context, BikeNavRelayService.class);
+        Intent intent = new Intent(context, TrailBridgeService.class);
         context.startForegroundService(intent);
     }
 }

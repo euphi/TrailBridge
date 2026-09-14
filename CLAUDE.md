@@ -1,4 +1,10 @@
-# BikeNavRelay -- Projektkontext für Claude Code
+# TrailBridge -- Projektkontext für Claude Code
+
+(App-Name/Package wurden von "BikeNavRelay"/`com.euphi.bikenavrelay` auf
+"TrailBridge"/`com.euphi.trailbridge` umbenannt -- Grund: "OsmAnd" durfte laut
+OsmAnds Markenrichtlinie nicht im Namen stehen, und "TrailBridge" trifft es
+auch besser. Das lokale Ordner-Verzeichnis heißt weiterhin `BikeNavRelay`,
+siehe Hinweis unten bei "Build".)
 
 Android-Companion-App, die OsmAnds Turn-by-Turn-Navigation per BLE an den
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32)
