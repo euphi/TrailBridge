@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 
@@ -56,6 +57,15 @@ public class OsmAndLink {
     /** How often we poll getAppInfo() for street names / ETA / after-next turn. */
     private static final long POLL_INTERVAL_MS = 1000L;
 
+    /**
+     * Right as you pass a turn, OsmAnd briefly reports no next-maneuver info
+     * while it recalculates (turnInfo null, or next_turn_type/distance not
+     * updated yet) -- observed to clear again well under 2s later. Only
+     * relay a switch to "not navigating" once it has persisted this long, so
+     * that blip doesn't flash a "no navigation" icon on the BikeComputer.
+     */
+    private static final long NONE_DEBOUNCE_MS = 2500L;
+
     public interface Listener {
         void onStatusChanged(String status);
 
@@ -70,6 +80,7 @@ public class OsmAndLink {
     private boolean bound = false;
     private boolean subscribed = false;
     private NavState lastState = NavState.NONE;
+    private long noNavSinceMs = -1L;
 
     private final Runnable pollTask = new Runnable() {
         @Override
@@ -194,6 +205,19 @@ public class OsmAndLink {
             return;
         }
         NavState state = parse(info);
+
+        if (!state.navigating) {
+            long now = SystemClock.elapsedRealtime();
+            if (noNavSinceMs < 0) {
+                noNavSinceMs = now;
+            }
+            if (now - noNavSinceMs < NONE_DEBOUNCE_MS) {
+                return; // transient blip -- keep showing the last real state
+            }
+        } else {
+            noNavSinceMs = -1L;
+        }
+
         if (!state.equals(lastState)) {
             lastState = state;
             if (listener != null) {

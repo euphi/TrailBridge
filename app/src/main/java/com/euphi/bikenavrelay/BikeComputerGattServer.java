@@ -42,6 +42,16 @@ public class BikeComputerGattServer {
 
     private static final long HEARTBEAT_INTERVAL_MS = 5000L;
 
+    /**
+     * Safety net: Android's BluetoothGattServer.onNotificationSent() is not
+     * always reliably delivered (observed: indicateInFlight then stays stuck
+     * true forever, silently blackholing every future send() for every
+     * subscriber, old or new, until the app is restarted). If no callback
+     * arrives within this long, force-clear the flag and retry instead of
+     * waiting forever.
+     */
+    private static final long INDICATE_TIMEOUT_MS = 3000L;
+
     public interface Listener {
         void onSubscriberCountChanged(int count);
 
@@ -71,6 +81,8 @@ public class BikeComputerGattServer {
             mainHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
         }
     };
+
+    private final Runnable indicateTimeout = this::onIndicateTimeout;
 
     public BikeComputerGattServer(Context context, Listener listener) {
         this.context = context.getApplicationContext();
@@ -147,6 +159,11 @@ public class BikeComputerGattServer {
     public void stop() {
         running = false;
         mainHandler.removeCallbacks(heartbeat);
+        mainHandler.removeCallbacks(indicateTimeout);
+        synchronized (this) {
+            indicateInFlight = false;
+            pendingFrame = null;
+        }
         try {
             if (advertiser != null) advertiser.stopAdvertising(advertiseCallback);
         } catch (Exception ignored) {
@@ -182,7 +199,26 @@ public class BikeComputerGattServer {
                 pendingFrame = frame;
                 return;
             }
-            indicateInFlight = trySendToAll(frame);
+            beginSend(frame);
+        }
+    }
+
+    /** Caller must hold the monitor lock (synchronized(this)). */
+    private void beginSend(byte[] frame) {
+        indicateInFlight = trySendToAll(frame);
+        if (indicateInFlight) {
+            mainHandler.postDelayed(indicateTimeout, INDICATE_TIMEOUT_MS);
+        }
+    }
+
+    private void onIndicateTimeout() {
+        synchronized (this) {
+            if (!indicateInFlight) return; // onNotificationSent already handled it
+            Log.w(TAG, "onNotificationSent nicht innerhalb " + INDICATE_TIMEOUT_MS + "ms angekommen -- setze zurück und versuche erneut");
+            indicateInFlight = false;
+            byte[] next = pendingFrame != null ? pendingFrame : lastFrame;
+            pendingFrame = null;
+            beginSend(next);
         }
     }
 
@@ -279,11 +315,12 @@ public class BikeComputerGattServer {
         @Override
         public void onNotificationSent(BluetoothDevice device, int status) {
             synchronized (BikeComputerGattServer.this) {
+                mainHandler.removeCallbacks(indicateTimeout);
                 indicateInFlight = false;
                 if (pendingFrame != null) {
                     byte[] next = pendingFrame;
                     pendingFrame = null;
-                    indicateInFlight = trySendToAll(next);
+                    beginSend(next);
                 }
             }
         }
