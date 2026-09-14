@@ -12,10 +12,17 @@
     <!-- Legacy Bluetooth permissions, normal (not dangerous) below API 31 -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-    <!-- API 31+: runtime ("dangerous") permissions, requested in MainActivity -->
+    <!-- API 31+/33+: runtime ("dangerous") permissions, requested in MainActivity -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+    <!-- Foreground Service, damit BikeNavRelayService (Advertising + GATT-Server
+         + OsmAnd-Verbindung) bei gesperrtem Bildschirm weiterlaeuft, statt mit
+         Activity.onStop() zu sterben. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
     <application
         android:allowBackup="true"
@@ -30,6 +37,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".BikeNavRelayService"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
     </application>
 </manifest>
