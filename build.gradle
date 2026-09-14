@@ -1,0 +1,12 @@
+// Keine Wrapper-JARs hier -- gebaut mit dem system-weiten `gradle` (siehe README.md).
+//
+// Versionsstand: AGP 8.13.0 ist die neueste 8.x-Version (Stand September 2026),
+// bewusst statt AGP 9.x gewählt, damit das stabile Gentoo-Paket
+// dev-java/gradle-bin-8.14.2 (>= von AGP 8.13.0 geforderten Gradle 8.13) reicht --
+// kein ~amd64-Testing-Gradle nötig. `gradle -v` prüfen -- falls dein
+// Gentoo-Portage eine ältere Gradle-Version liefert, hier eine ältere
+// AGP-Version eintragen, die dazu passt (siehe
+// https://developer.android.com/build/releases/gradle-plugin#updating-gradle).
+plugins {
+    id 'com.android.application' version '8.13.0' apply false
+}

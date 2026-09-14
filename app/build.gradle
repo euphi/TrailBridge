@@ -1,0 +1,35 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.euphi.bikenavrelay'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.euphi.bikenavrelay"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "0.2-milestone2"
+    }
+
+    buildFeatures {
+        aidl true
+    }
+
+    buildTypes {
+        debug {
+            // nothing special yet
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
