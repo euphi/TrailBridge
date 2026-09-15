@@ -5,4 +5,5 @@
     <string name="navstate_initial">(noch keine Navigationsdaten)</string>
     <string name="retry_button">Erneut versuchen</string>
     <string name="ble_status_initial">BLE: startet …</string>
+    <string name="position_initial">(noch keine GPS-Daten)</string>
 </resources>

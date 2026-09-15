@@ -18,11 +18,18 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
+    <!-- Direkter GPS-Zugriff (GpsLink) fuer den Positions-Service,
+         unabhaengig von OsmAnd, siehe PROTOCOL.md. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- Foreground Service, damit TrailBridgeService (Advertising + GATT-Server
-         + OsmAnd-Verbindung) bei gesperrtem Bildschirm weiterlaeuft, statt mit
-         Activity.onStop() zu sterben. -->
+         + OsmAnd-Verbindung + GPS) bei gesperrtem Bildschirm weiterlaeuft, statt
+         mit Activity.onStop() zu sterben. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- API 34+ verlangt diese Permission zusaetzlich zu ACCESS_FINE_LOCATION,
+         sobald ein Foreground Service den "location"-Typ deklariert. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -43,7 +50,7 @@
         <service
             android:name=".TrailBridgeService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice|location" />
 
     </application>
 </manifest>

@@ -7,12 +7,15 @@ Ersetzt Komoots eingestellten BLE-Navigationsdienst für den
 Straßennamen, übernächstes Manöver, Restdistanz/-zeit auf dem Bildschirm.
 
 **Meilenstein 2 (dieser Stand):** BLE-GATT-Server (Peripheral-Rolle) nach
-[PROTOCOL.md](PROTOCOL.md). Die App advertised den Service, nimmt
+[PROTOCOL.md](PROTOCOL.md). Die App advertised den Nav-Service, nimmt
 Indicate-Abonnements entgegen und schickt bei jeder Änderung sowie als
-Heartbeat alle 5s einen TLV-Frame raus. **Der BikeComputer selbst spricht das
-Protokoll noch nicht** -- das ist Meilenstein 3 (Firmware-Änderung in
-`BLEDevices.cpp`). Bis dahin lässt sich der BLE-Teil mit jeder
-BLE-Scanner-App (z.B. [nRF Connect](https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile))
+Heartbeat alle 5s einen TLV-Frame raus. Zusätzlich ein zweiter, unabhängiger
+GATT-Service: rohe GPS-Position direkt vom Handy-GPS-Chip
+(`LocationManager.GPS_PROVIDER`, siehe `GpsLink.java`), funktioniert also auch
+ohne laufendes OsmAnd. **Der BikeComputer selbst spricht das Protokoll noch
+nicht** -- das ist Meilenstein 3 (Firmware-Änderung in `BLEDevices.cpp`). Bis
+dahin lässt sich der BLE-Teil mit jeder BLE-Scanner-App (z.B.
+[nRF Connect](https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile))
 verifizieren.
 
 ## Woher die AIDL-Dateien kommen
@@ -154,6 +157,12 @@ und den Import-Fix erneut anwenden.
 5. In OsmAnd eine Route starten -> bei jeder Manöveränderung ein neuer Frame,
    ansonsten spätestens alle 5s (Heartbeat). Byte-Layout siehe PROTOCOL.md,
    in nRF Connect als Hex anzeigen lassen.
+6. Für den GPS-Positions-Service: in nRF Connect nach dem Verbinden auf
+   "Services neu laden"/Discovery -- er wird nicht beworben (siehe
+   PROTOCOL.md), taucht aber nach Verbindungsaufbau als eigener Service
+   `66b5835c-...` mit Characteristic `10c49e7b-...` auf. Standort-Berechtigung
+   muss dafür in TrailBridge erteilt sein (wird beim ersten Start abgefragt)
+   und GPS am Handy aktiv/im Freien für einen echten Fix.
 
 ## Nächste Schritte (noch nicht in diesem Stand)
 
@@ -162,4 +171,6 @@ und den Import-Fix erneut anwenden.
   den CCCD-Descriptor -- die Stelle, die im Original auskommentiert war)
   ersetzen; neue Icon-Tabelle für die erweiterten Manöver-Codes
   (Kreisverkehr mit Ausfahrt, übernächstes Manöver als kleines
-  Vorschau-Icon, ETA-Anzeige).
+  Vorschau-Icon, ETA-Anzeige). Zusätzlich: zweiten Indicate-Subscribe für
+  den GPS-Positions-Service (eigene Characteristic, eigenes TLV-Format,
+  siehe PROTOCOL.md).

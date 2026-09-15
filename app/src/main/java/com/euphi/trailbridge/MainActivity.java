@@ -52,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     private TextView statusView;
     private TextView bleStatusView;
     private TextView navStateView;
+    private TextView positionStateView;
 
     @Nullable private TrailBridgeService service;
     private boolean bound = false;
@@ -64,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         statusView = findViewById(R.id.statusView);
         bleStatusView = findViewById(R.id.bleStatusView);
         navStateView = findViewById(R.id.navStateView);
+        positionStateView = findViewById(R.id.positionStateView);
         findViewById(R.id.retryButton).setOnClickListener(v -> {
             if (service != null) service.retrySubscribe();
         });
@@ -108,6 +110,10 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
                 missing.add(Manifest.permission.POST_NOTIFICATIONS);
             }
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
         if (missing.isEmpty()) {
             startAndBindService();
         } else {
@@ -132,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
             if (allGranted) {
                 startAndBindService();
             } else {
-                bleStatusView.setText("Bluetooth-/Benachrichtigungs-Berechtigung verweigert -- BLE-Server kann nicht starten.");
+                bleStatusView.setText("Berechtigung(en) verweigert (Bluetooth/Benachrichtigung/Standort) -- Dienst kann nicht vollständig starten.");
             }
         }
     }
@@ -164,6 +170,16 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     @Override
     public void onNavState(NavState state) {
         runOnUiThread(() -> navStateView.setText(state.toString()));
+    }
+
+    @Override
+    public void onGpsStatusChanged(String status) {
+        runOnUiThread(() -> positionStateView.setText(status));
+    }
+
+    @Override
+    public void onPositionUpdate(PositionState state) {
+        runOnUiThread(() -> positionStateView.setText(state.toString()));
     }
 
     @Override

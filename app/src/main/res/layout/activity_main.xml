@@ -36,4 +36,13 @@
         android:fontFamily="monospace"
         android:text="@string/navstate_initial" />
 
+    <TextView
+        android:id="@+id/positionStateView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="16dp"
+        android:textSize="14sp"
+        android:fontFamily="monospace"
+        android:text="@string/position_initial" />
+
 </LinearLayout>

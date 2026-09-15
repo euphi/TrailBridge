@@ -109,6 +109,98 @@ halten, noch 4200 m / 600 s bis Ziel":
 37 Bytes gesamt -- passt mit großem Puffer in die per `setMTU(256)`
 verhandelte ATT-MTU von 256 Byte (253 Byte nutzbar).
 
+## GPS-Positions-Service
+
+Eigener BLE-Service, unabhängig vom Navigations-Service oben. Die Positionsdaten
+kommen direkt vom GPS-Chip des Handys (`LocationManager.GPS_PROVIDER`), nicht
+von OsmAnd -- funktioniert also auch, wenn OsmAnd gar nicht läuft oder nicht
+installiert ist.
+
+### UUIDs
+
+- Service:        `66b5835c-9be6-43d1-b24a-f9337c0fcb7f`
+- Characteristic: `10c49e7b-4808-4d63-9b68-9ba6c385db0d`
+  Properties: `INDICATE`, `READ`
+
+Wird bewusst NICHT im Advertising-Paket beworben (31-Byte-Legacy-Limit --
+siehe Kommentar in `BikeComputerGattServer`, der Nav-Service allein füllt das
+Hauptpaket schon aus). Der BikeComputer findet ihn nach dem Verbindungsaufbau
+über normale GATT-Service-Discovery, genau wie er auch ohne Advertising-Eintrag
+z.B. das Battery-Service der anderen Sensoren findet.
+
+### Übertragungsart
+
+Wie beim Navigations-Service: Indicate primär, Read als Fallback,
+Heartbeat alle 5s -- unabhängig vom Navigations-Heartbeat/-State getaktet.
+
+**Wichtig für eine Firmware-Neuimplementierung:** Beide Services teilen sich
+einen einzigen `BluetoothGattServer`-Prozess auf App-Seite. Die Android- (und
+allgemein BLE-)Plattformvorgabe erlaubt pro verbundenem Gerät nur eine
+Indicate/Notify gleichzeitig "in flight", auch über Characteristics/Services
+hinweg -- `onNotificationSent()` sagt nicht, welche Characteristic gerade
+fertig wurde. `BikeComputerGattServer` serialisiert Nav- und
+Positions-Frames deshalb über ein gemeinsames In-Flight-Gate. Für den ESP32
+als Central spielt das keine Rolle (der empfängt einfach zwei unabhängige
+Indicate-Streams), nur relevant, falls die App-Seite mal neu gebaut wird.
+
+### Frame-Format
+
+```
+Byte 0:   Protokoll-Version (aktuell 1)
+Byte 1:   Message-Type
+Byte 2..: TLV-Einträge (nur bei POSITION_UPDATE)
+```
+
+Message-Types:
+
+| Wert | Name | Bedeutung |
+|---|---|---|
+| 0x00 | HELLO | Lebenszeichen/Versions-Check, keine weiteren Daten |
+| 0x01 | POSITION_UPDATE | gültiger GPS-Fix, gefolgt von TLV-Einträgen |
+| 0x02 | POSITION_NONE | (noch) kein Fix -- GPS aus, Berechtigung fehlt, oder noch kein Satellitenempfang |
+
+TLV-Eintrag: `Tag (1 Byte) | Länge N (1 Byte) | Wert (N Byte)`
+
+| Tag | Name | Länge | Format | Bedingung |
+|---|---|---|---|---|
+| 0x01 | LATITUDE_E7 | 4 | int32 LE, Breitengrad × 1e7 | immer |
+| 0x02 | LONGITUDE_E7 | 4 | int32 LE, Längengrad × 1e7 | immer |
+| 0x03 | ALTITUDE_M | 4 | int32 LE, Meter über Ellipsoid | nur wenn der Fix eine Höhe liefert |
+| 0x04 | SPEED_CMS | 4 | uint32 LE, cm/s | nur wenn der Fix eine Geschwindigkeit liefert |
+| 0x05 | BEARING_DEG_X100 | 2 | uint16 LE, Grad × 100 (0..35999) | nur wenn der Fix einen Kurs liefert |
+| 0x06 | ACCURACY_M_X10 | 2 | uint16 LE, Meter × 10 (horizontale Genauigkeit) | nur wenn der Fix eine Genauigkeit liefert |
+| 0x07 | FIX_AGE_MS | 4 | uint32 LE, Millisekunden seit diesem Fix | immer |
+
+E7-Fixpunkt für Lat/Lon (statt Gleitkomma) aus demselben Grund wie überall
+sonst im TLV-Format: festes, plattformunabhängiges Byte-Layout, kein
+Float-Endianness-/NaN-Ärger. ±90°/±180° × 1e7 passen beide bequem in ein
+signed int32 (max. ±2.147 Mrd.).
+
+FIX_AGE_MS erlaubt der Firmware zu erkennen, ob der letzte Fix frisch ist oder
+nur der Heartbeat einen alten Stand wiederholt (Tunnel, Satellitenausfall
+o.ä.) -- wird bei jedem Senden aus `SystemClock.elapsedRealtime() -
+location.getElapsedRealtimeNanos()/1_000_000` neu berechnet, ist also auch
+bei Heartbeat-Resends korrekt und nicht auf den ursprünglichen Fix-Zeitpunkt
+eingefroren.
+
+### Beispiel
+
+Fix bei 52.5163° N, 13.3777° O, 34 m Höhe, 4,2 m/s, Kurs 87,5°, ±5 m
+Genauigkeit, vor 320 ms:
+
+```
+01 01                                              version=1, type=POSITION_UPDATE
+01 04 F8 59 4D 1F                                  LATITUDE_E7 = 525163000
+02 04 68 46 F9 07                                  LONGITUDE_E7 = 133777000
+03 04 22 00 00 00                                  ALTITUDE_M = 34
+04 04 A4 01 00 00                                  SPEED_CMS = 420
+05 02 2E 22                                        BEARING_DEG_X100 = 8750
+06 02 32 00                                         ACCURACY_M_X10 = 50
+07 04 40 01 00 00                                  FIX_AGE_MS = 320
+```
+
+40 Bytes gesamt -- passt locker in die ausgehandelte ATT-MTU.
+
 ## Warum Indicate statt Notify
 
 Bei Indicate bestätigt der Empfänger (ESP32) jedes Paket auf ATT-Ebene, bei
