@@ -40,13 +40,18 @@ jobs:
           fi
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # Kein eigener Android-SDK-Setup-Schritt: die ubuntu-latest-Runner
+      # bringen bereits ein vorinstalliertes, lizenz-akzeptiertes Android SDK
+      # mit (ANDROID_HOME schon gesetzt) -- AGP lädt bei Bedarf fehlende
+      # Platform-/Build-Tools-Versionen während des Gradle-Builds selbst
+      # nach. android-actions/setup-android@v3 versucht dagegen das längst
+      # aus dem SDK-Repository entfernte Legacy-Paket "tools" zu
+      # installieren und schlägt deshalb zuverlässig fehl.
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
