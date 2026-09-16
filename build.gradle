@@ -1,4 +1,4 @@
-// Keine Wrapper-JARs hier -- gebaut mit dem system-weiten `gradle` (siehe README.md).
+// Keine Wrapper-JARs hier -- gebaut mit dem system-weiten `gradle` (siehe BUILD.md).
 //
 // Versionsstand: AGP 8.13.0 ist die neueste 8.x-Version (Stand September 2026),
 // bewusst statt AGP 9.x gewählt, damit das stabile Gentoo-Paket

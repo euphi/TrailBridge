@@ -18,9 +18,31 @@ android {
         aidl true
     }
 
+    // Release-Signing kommt aus Umgebungsvariablen statt aus eingecheckten
+    // Dateien -- lokal einfach ungesetzt lassen (assembleRelease baut dann
+    // eine unsignierte APK), in CI setzt der Release-Workflow sie aus
+    // GitHub-Secrets. Siehe BUILD.md, Abschnitt "Release".
+    signingConfigs {
+        release {
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // nothing special yet
+        }
+        release {
+            minifyEnabled false
+            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

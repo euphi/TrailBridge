@@ -10,9 +10,10 @@ Android-Companion-App, die OsmAnds Turn-by-Turn-Navigation per BLE an den
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32)
 weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
 
-**Vor jeder Änderung lesen:** [`README.md`](README.md) (Setup/Build/Test) und
-[`PROTOCOL.md`](PROTOCOL.md) (das BLE-Wire-Format -- verbindlicher Vertrag
-zwischen App und Firmware, nicht auf eigene Faust ändern).
+**Vor jeder Änderung lesen:** [`README.md`](README.md) (Projektüberblick,
+Testen), [`BUILD.md`](BUILD.md) (Setup/Build) und [`PROTOCOL.md`](PROTOCOL.md)
+(das BLE-Wire-Format -- verbindlicher Vertrag zwischen App und Firmware,
+nicht auf eigene Faust ändern).
 
 ## Stand
 
@@ -51,7 +52,7 @@ zwischen App und Firmware, nicht auf eigene Faust ändern).
 ## Build
 
 Kein Gradle-Wrapper -- System-Gradle nutzen. Kompletter Ablauf inkl.
-Versions-Kompatibilität in README.md. Kurzform, wenn die Umgebung schon
+Versions-Kompatibilität in BUILD.md. Kurzform, wenn die Umgebung schon
 steht:
 
 ```bash
