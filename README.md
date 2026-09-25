@@ -13,9 +13,15 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   TLV-Protokoll per BLE an den BikeComputer -- siehe [PROTOCOL.md](PROTOCOL.md).
 - Zweiter, unabhängiger BLE-Service mit der rohen Handy-GPS-Position, direkt
   vom GPS-Chip -- funktioniert auch ohne laufendes OsmAnd.
-- **Status:** App- und Protokoll-Seite fertig. Die Firmware
+- **Status:** Läuft Ende-zu-Ende. Die Firmware
   ([TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer)) spricht
-  das Protokoll noch nicht -- das ist der nächste Schritt.
+  das Protokoll inklusive GPS-Position bereits. Erste Beta-APK: siehe
+  [Releases](https://github.com/euphi/TrailBridge/releases).
+
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_app.png" height="480" alt="TrailBridge-App während einer OsmAnd-Navigation">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_bikecomputer.jpg" height="480" alt="TRGB-BikeComputer zeigt das weitergeleitete Abbiegemanöver">
+</p>
 
 ## AIDL
 
