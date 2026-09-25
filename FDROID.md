@@ -36,9 +36,11 @@ GitHub-Release-Beschreibung erwähnen.
 2. **Auf GitLab** `https://gitlab.com/fdroid/fdroiddata` forken, neuen Branch
    `com.euphi.trailbridge` anlegen.
 3. `fdroid/com.euphi.trailbridge.yml` aus diesem Repo als
-   `metadata/com.euphi.trailbridge.yml` in den Fork kopieren (die
-   Kommentarzeilen oben dürfen raus -- `fdroid rewritemeta` entfernt sie
-   ohnehin).
+   `metadata/com.euphi.trailbridge.yml` in den Fork kopieren. **Keine
+   Kommentare** hinzufügen: die fdroiddata-CI prüft, dass die Datei exakt
+   so aussieht, wie `fdroid rewritemeta` sie schreibt, und das entfernt
+   Kommentare -- jede `#`-Zeile lässt den Job fehlschlagen. Nur finale Tags
+   (`vX.Y.Z`) zählen wegen des Regex bei `UpdateCheckMode`.
 4. Pushen -- die CI im Fork läuft `fdroid lint` und einen Testbuild. Wenn
    grün: Merge Request gegen `fdroid/fdroiddata` öffnen, Vorlage "App
    inclusion" auswählen und die Checkliste ausfüllen.
