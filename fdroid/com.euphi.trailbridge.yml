@@ -1,0 +1,30 @@
+# Entwurf für fdroiddata (https://gitlab.com/fdroid/fdroiddata), dort als
+# metadata/com.euphi.trailbridge.yml einreichen -- siehe FDROID.md.
+# Beschreibung, Icon und Changelogs zieht F-Droid aus fastlane/ im App-Repo.
+Categories:
+  - Navigation
+  - Sports & Health
+License: GPL-3.0-or-later
+AuthorName: Ian
+SourceCode: https://github.com/euphi/TrailBridge
+IssueTracker: https://github.com/euphi/TrailBridge/issues
+Changelog: https://github.com/euphi/TrailBridge/releases
+
+AutoName: TrailBridge
+
+RepoType: git
+Repo: https://github.com/euphi/TrailBridge.git
+
+Builds:
+  - versionName: 0.4.1
+    versionCode: 401
+    commit: v0.4.1
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+# Nur finale Tags (v1.2.3), keine -beta/-rc-Vorabversionen.
+UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+CurrentVersion: 0.4.1
+CurrentVersionCode: 401

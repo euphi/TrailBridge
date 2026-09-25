@@ -1,0 +1,2 @@
+• License changed to GPL-3.0-or-later (required by the bundled GPLv3 OsmAnd interface files)
+• Build prepared for F-Droid

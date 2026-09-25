@@ -87,9 +87,13 @@ New repository secret** vier Secrets anlegen:
 ### Release auslösen
 
 ```
-git tag v0.4.0-beta1
-git push origin v0.4.0-beta1
+git tag v0.4.1
+git push origin v0.4.1
 ```
+
+Der Tag muss zu `versionName` in `app/build.gradle` passen (`v` + versionName),
+sonst bricht der Workflow ab -- F-Droid baut aus denselben Tags, siehe
+[FDROID.md](FDROID.md).
 
 Oder ohne Tag zum Testen: im GitHub-Repo unter **Actions > Release APK > Run
 workflow** manuell anstoßen (Versions-Tag als Eingabefeld).

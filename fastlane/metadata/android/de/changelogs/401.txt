@@ -1,0 +1,2 @@
+• Lizenz auf GPL-3.0-or-later umgestellt (wegen der übernommenen GPLv3-OsmAnd-Schnittstellendateien)
+• Build für F-Droid vorbereitet

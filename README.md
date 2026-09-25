@@ -32,7 +32,7 @@ und `app/src/main/java/net/osmand/aidlapi/`.
 
 ## Bauen
 
-Siehe [BUILD.md](BUILD.md).
+Siehe [BUILD.md](BUILD.md), Veröffentlichung auf F-Droid: [FDROID.md](FDROID.md).
 
 ## Testen
 
@@ -51,3 +51,12 @@ Siehe [BUILD.md](BUILD.md).
 Ohne BikeComputer lässt sich der BLE-Teil auch mit jeder BLE-Scanner-App
 prüfen, z.B. [nRF Connect](https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile)
 -- UUIDs und Frame-Format siehe [PROTOCOL.md](PROTOCOL.md).
+
+## Lizenz
+
+Copyright (C) 2026 Ian
+
+TrailBridge steht unter der [GNU General Public License v3.0 oder später](LICENSE)
+(GPL-3.0-or-later). Die übernommenen OsmAnd-AIDL-Dateien
+(`net.osmand.aidlapi.*`) stammen aus dem GPLv3-lizenzierten
+[OsmAnd-Repo](https://github.com/osmandapp/OsmAnd) (© OsmAnd BV).

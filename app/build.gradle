@@ -10,8 +10,19 @@ android {
         applicationId "com.euphi.trailbridge"
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName "0.4.0"
+        // Schema: versionCode = MAJOR*10000 + MINOR*100 + PATCH, versionName
+        // = Git-Tag ohne "v" (Tag v0.4.1 -> "0.4.1" / 401). F-Droid erkennt
+        // neue Versionen über die Tags und prüft genau diese beiden Werte --
+        // vor jedem Release-Tag hier hochzählen, siehe FDROID.md.
+        versionCode 401
+        versionName "0.4.1"
+    }
+
+    // Kein von Google verschlüsselter Abhängigkeits-Blob in der APK -- F-Droid
+    // lehnt den ab (nicht prüfbar), und er macht den Build unreproduzierbar.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     buildFeatures {

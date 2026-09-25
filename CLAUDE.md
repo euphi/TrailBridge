@@ -52,6 +52,14 @@ nicht auf eigene Faust ändern).
   bestehende Verbindungslogik in `BLEDevices.cpp` für die anderen
   Sensoren (HR, CSC, Forumslader).
 
+## Lizenz & F-Droid
+
+Lizenz ist GPL-3.0-or-later (vorher MIT) -- zwingend, weil die
+`net.osmand.aidlapi`-Dateien aus dem GPLv3-OsmAnd-Repo stammen. Die App soll
+auf F-Droid: keine proprietären Abhängigkeiten, kein Tracking, keine
+Binärdateien einchecken. Versionsschema und Release-Ablauf in
+[`FDROID.md`](FDROID.md).
+
 ## Build
 
 Kein Gradle-Wrapper -- System-Gradle nutzen. Kompletter Ablauf inkl.
