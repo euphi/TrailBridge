@@ -18,6 +18,4 @@
 <li>A phone that supports the BLE peripheral role</li>
 </ul>
 
-<p>The app's user interface is currently German only.</p>
-
-<p>TrailBridge is an independent project and is not affiliated with OsmAnd B.V. or Komoot.</p>
+<p>TrailBridge is an independent project and is not affiliated with OsmAnd B.V.</p>
