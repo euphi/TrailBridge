@@ -22,14 +22,17 @@ nicht auf eigene Faust ändern).
 - **Meilenstein 2 (fertig):** `BikeComputerGattServer.java` +
   `NavFrameEncoder.java` -- BLE-GATT-Server (Peripheral-Rolle), TLV-Protokoll
   nach PROTOCOL.md, Indicate statt Poll.
-- **Meilenstein 3 (offen):** Firmware-Seite. Das TRGB-BikeComputer-Repo liegt
-  NICHT in diesem Ordner -- separat unter
-  `https://github.com/euphi/TRGB-BikeComputer` geklont. Dort muss
-  `src/BLEDevices.cpp`/`.h` vom alten Komoot-Parser (`komootLoop()`, feste
-  Byte-Offsets) auf einen TLV-Parser nach PROTOCOL.md umgestellt werden,
-  inklusive Aktivieren von Indicate (Schreiben auf den CCCD-Descriptor --
-  im Originalcode auskommentiert) und einer neuen Icon-Tabelle für die
-  erweiterten Manöver-Codes aus `Maneuver.java`.
+- **Meilenstein 3 (fertig, Stand 2026-09-16):** Firmware-Seite. Das
+  TRGB-BikeComputer-Repo liegt NICHT in diesem Ordner -- separat unter
+  `https://github.com/euphi/TRGB-BikeComputer` geklont. Dort ist
+  `src/BLEDevices.cpp`/`.h` vom alten Komoot-Parser bereits auf einen
+  TLV-Parser nach PROTOCOL.md umgestellt (Commits `faefff4`, `c6d6277`),
+  inklusive Indicate-Subscribe und Icon-Tabelle für die Manöver-Codes, sowie
+  Parsing/Logging des GPS-Positions-Service (Commit `cf64345`) -- lief
+  parallel zur App-Arbeit hier, unabhängig entstanden. Bekannte Lücken laut
+  TRGB-BikeComputer-README: BLE-Adresse von TrailBridge wird nicht
+  fest gepinnt (Android-Peripherals rotieren die Adresse), kein manueller
+  Wechsel der Nav-Anzeige.
 
 ## Verifizierte Fakten, die beim Weiterbauen wichtig sind
 
