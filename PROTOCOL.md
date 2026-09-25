@@ -59,6 +59,10 @@ TLV-Eintrag: `Tag (1 Byte) | Länge N (1 Byte) | Wert (N Byte)`
 | 0x07 | NEXT_STREET_NAME | ≤48 | UTF-8 | wie 0x05 |
 | 0x08 | REMAINING_DISTANCE_M | 4 | uint32 LE, Meter bis Ziel | immer |
 | 0x09 | REMAINING_TIME_S | 4 | uint32 LE, Sekunden bis Ziel | immer |
+| 0x0A | LANES | N (Vielfaches von 4) | Fahrspurliste, siehe unten | nur wenn OsmAnd Fahrspurdaten liefert (`turn_lanes`, selten auf reinen Radwegen) |
+| 0x0B | NEXT_LANES | N (Vielfaches von 4) | wie 0x0A | wie 0x0A, aber für die übernächste Abbiegung (wie 0x05/0x06/0x07) |
+| 0x0C | LANE_DISTANCE_M | 4 | uint32 LE, Meter bis zu dem Punkt, an dem die LANES-Angabe gilt | nur wenn Tag 0x0A vorhanden |
+| 0x0D | NEXT_LANE_DISTANCE_M | 4 | uint32 LE, Meter | nur wenn Tag 0x0B vorhanden |
 
 **Unbekannte Tags muss die Firmware überspringen** (Länge respektieren, Wert
 ignorieren) -- so bleibt Raum für spätere Erweiterungen, ohne dass ältere
@@ -89,6 +93,94 @@ von OsmAnds internen `TurnType`-Konstanten. Referenz-Implementierung:
 | 13 | UTURN_RIGHT |
 | 14 | ROUNDABOUT (Ausfahrt in Tag 0x03) |
 | 255 | UNKNOWN |
+
+## Fahrspur-Informationen (LANES / NEXT_LANES)
+
+Bildet OsmAnds Fahrspur-Führung ab (AIDL-`turnInfo`-Bundle-Keys
+`next_turn_lanes` / `after_nextturn_lanes`, gespeist aus dem OSM-Tag
+`turn:lanes`; verifiziert gegen `ExternalApiHelper#updateRouteDirectionInfo`
+und `net.osmand.router.TurnType` im OsmAnd-Quellcode, Stand 2026-09-18).
+OsmAnd liefert das als `int[]`, ein bit-gepacktes Int pro Fahrspur (Bit 0 =
+aktiv/empfohlen, Bits 1-4 = primäre Richtung, weitere Bits sekundär/
+tertiär). Wie bei den Manöver-Codes übernehmen wir dieses Bit-Layout nicht
+1:1, sondern übersetzen jede Richtung in unsere eigene Manöver-Code-Tabelle
+(oben) -- damit hängt die Firmware nicht an OsmAnds internen
+`TurnType`-Konstanten.
+
+Wert von Tag 0x0A/0x0B: eine Liste von Fahrspuren, von links nach rechts
+(wie im OSM-Tagging und in OsmAnds Array-Reihenfolge), je 4 Byte:
+
+| Byte | Bedeutung |
+|---|---|
+| 0 | primärer Manöver-Code -- Haupt-Pfeilrichtung dieser Spur |
+| 1 | sekundärer Manöver-Code, `0` (NONE) = keine zweite Richtung |
+| 2 | tertiärer Manöver-Code, `0` (NONE) = keine dritte Richtung |
+| 3 | Flags -- Bit 0 = `ACTIVE` (von OsmAnds Router für die berechnete Route empfohlen), Bits 1-7 reserviert (aktuell `0`, von der Firmware zu ignorieren) |
+
+Byte 0 ist nie `0`: Eine Spur ohne explizit gesetzte primäre Richtung
+behandelt OsmAnd intern bereits als "geradeaus" (siehe
+`TurnType.lanesToString()`), die App bildet diesen Fallback schon auf
+STRAIGHT (Code 3) ab, bevor sie den Frame baut -- die Firmware muss `0` in
+Byte 0 also nicht gesondert behandeln.
+
+Länge N = Anzahl Fahrspuren × 4 (das TLV-Längenbyte begrenzt das auf maximal
+63 Fahrspuren -- reale Straßen haben selten mehr als 6-8).
+
+Die reservierten Flag-Bits lassen Raum für eine mögliche spätere Erweiterung
+um fahrradspezifisches Spur-Tagging oder weitere Spureigenschaften, ohne die
+Byte-Breite pro Spur nachträglich ändern zu müssen.
+
+### Distanz (LANE_DISTANCE_M / NEXT_LANE_DISTANCE_M)
+
+Der Punkt, an dem eine Fahrspurwahl relevant wird (z.B. wo sich eine Spur
+auffächert), muss NICHT mit dem Punkt der eigentlichen Abbiege-Anweisung
+zusammenfallen -- auf mehrspurigen Straßen liegt er typischerweise deutlich
+davor. LANES/NEXT_LANES tragen deshalb eine eigene, von
+MANEUVER_DISTANCE_M/NEXT_MANEUVER_DISTANCE_M unabhängige Distanz (Tag
+0x0C/0x0D) -- die Firmware darf die beiden Distanzen nicht gleichsetzen.
+
+**Aktueller Stand auf der App-Seite (Stand 2026-09-19):** OsmAnds AIDL
+hängt `next_turn_lanes`/`after_nextturn_lanes` an dieselbe
+`RouteDirectionInfo`/`NextDirectionInfo` wie die zugehörige
+Abbiege-Distanz -- über die AIDL-API sind beide Distanzen also aktuell
+tatsächlich identisch. `ExternalApiHelper#getRouteDirectionsInfo` hat
+zwar einen zweiten Mechanismus (`no_speak_next_`-Bundle-Präfix), der dem
+Namen nach genau für einen früheren, nicht angesagten Fahrspur-Punkt
+gedacht ist -- der Rückgabewert des zugehörigen
+`getNextRouteDirectionInfo(..., false)`-Aufrufs wird dort aber verworfen
+und stattdessen das schon belegte (veraltete) `ni` von `after_next`
+wiederverwendet:
+
+```java
+routingHelper.getNextRouteDirectionInfo(new NextDirectionInfo(), false);
+if (ni.distanceTo > 0) {
+    updateTurnInfo("no_speak_next_", bundle, ni);
+}
+```
+
+`no_speak_next_*` ist damit im aktuellen OsmAnd-Master (verifiziert
+2026-09-19, `OsmAnd/src/net/osmand/plus/helpers/ExternalApiHelper.java`)
+faktisch ein Duplikat von `after_next*` statt eines eigenen früheren
+Punkts -- nutzbar ist es so nicht. Bis das upstream behoben ist (oder ein
+anderer Weg gefunden wird), sendet die App für
+LANE_DISTANCE_M/NEXT_LANE_DISTANCE_M denselben Wert wie
+MANEUVER_DISTANCE_M/NEXT_MANEUVER_DISTANCE_M. Die eigenständigen Tags
+bleiben trotzdem bestehen, damit sich das später nachrüsten lässt, ohne
+den Wire-Vertrag zu brechen.
+
+### Beispiel
+
+Zwei Fahrspuren, 45 m voraus (die Spurwahl wird hier schon relevant, obwohl
+die eigentliche Abbiegung laut MANEUVER_DISTANCE_M erst in 300 m kommt):
+linke Spur nur geradeaus, rechte Spur geradeaus-oder-rechts und vom Router
+für die Route empfohlen:
+
+```
+0A 08                                              LANES, Länge 8 (2 Spuren)
+   03 00 00 00                                     Spur 1: STRAIGHT, --, --, Flags=0
+   03 08 00 01                                     Spur 2: STRAIGHT, TURN_RIGHT, --, Flags=ACTIVE
+0C 04 2D 00 00 00                                  LANE_DISTANCE_M = 45
+```
 
 ## Beispiel
 

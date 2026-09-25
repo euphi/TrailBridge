@@ -101,6 +101,39 @@ public final class Maneuver {
         }
     }
 
+    /**
+     * Maps one of OsmAnd's raw net.osmand.router.TurnType integer constants
+     * (as packed into the per-lane ints of the "turn_lanes" bundle field,
+     * see Lane#fromOsmAndLaneValue and PROTOCOL.md "Fahrspur-
+     * Informationen") to our own Maneuver code. 0 ("not set") maps to NONE
+     * here -- callers decide what that means for their field, since OsmAnd
+     * itself treats an unset *primary* turn as straight, not "nothing"
+     * (see TurnType#lanesToString()).
+     *
+     * Verified against net.osmand.router.TurnType.java (OsmAnd-java module,
+     * constants C=1 .. RNLB=14, Stand 2026-09-18).
+     */
+    public static int fromOsmAndLaneTurnType(int turnType) {
+        switch (turnType) {
+            case 1: return STRAIGHT;           // C
+            case 2: return TURN_LEFT;          // TL
+            case 3: return TURN_SLIGHT_LEFT;   // TSLL
+            case 4: return TURN_SHARP_LEFT;    // TSHL
+            case 5: return TURN_RIGHT;         // TR
+            case 6: return TURN_SLIGHT_RIGHT;  // TSLR
+            case 7: return TURN_SHARP_RIGHT;   // TSHR
+            case 8: return KEEP_LEFT;          // KL
+            case 9: return KEEP_RIGHT;         // KR
+            case 10: return UTURN_LEFT;        // TU
+            case 11: return UTURN_RIGHT;       // TRU
+            case 12: return NONE;              // OFFR -- mirrors fromOsmAndXml()
+            case 13:                           // RNDB
+            case 14: return ROUNDABOUT;        // RNLB
+            case 0: return NONE;
+            default: return UNKNOWN;
+        }
+    }
+
     public static String name(int maneuver) {
         switch (maneuver) {
             case NONE: return "NONE";

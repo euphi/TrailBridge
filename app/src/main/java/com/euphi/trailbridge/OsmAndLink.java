@@ -23,6 +23,8 @@ import net.osmand.aidlapi.navigation.ANavigationUpdateParams;
 import net.osmand.aidlapi.navigation.OnVoiceNavigationParams;
 import net.osmand.aidlapi.search.SearchResult;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -245,12 +247,18 @@ public class OsmAndLink {
         String nextType = turnInfo.getString("next_turn_type");
         String nextName = turnInfo.getString("next_turn_name");
         int nextDistance = turnInfo.getInt("next_turn_distance", 0);
+        String rawNextLanes = turnInfo.getString("next_turn_lanes");
+        Log.i(TAG, "raw next_turn_lanes=" + rawNextLanes);
+        List<Lane> lanes = parseLanes(rawNextLanes);
 
         // Note the missing underscore: OsmAnd really does write "after_next"
         // + "turn_type" = "after_nextturn_type", not "after_next_turn_type".
         String afterType = turnInfo.getString("after_nextturn_type");
         String afterName = turnInfo.getString("after_nextturn_name");
         int afterDistance = turnInfo.getInt("after_nextturn_distance", 0);
+        String rawAfterLanes = turnInfo.getString("after_nextturn_lanes");
+        Log.i(TAG, "raw after_nextturn_lanes=" + rawAfterLanes);
+        List<Lane> afterLanes = parseLanes(rawAfterLanes);
 
         int maneuver = Maneuver.fromOsmAndXml(nextType);
         int exit = Maneuver.roundaboutExit(nextType);
@@ -258,9 +266,51 @@ public class OsmAndLink {
 
         boolean navigating = maneuver != Maneuver.NONE || nextDistance > 0;
 
-        return new NavState(navigating, maneuver, nextDistance, exit, nextName,
-                nextManeuver, afterDistance, afterName,
+        // OsmAnd doesn't currently give us a lane-choice point independent of
+        // the maneuver point -- turn_lanes hangs off the very same
+        // RouteDirectionInfo as the turn distance. There IS a second
+        // mechanism in ExternalApiHelper#getRouteDirectionsInfo meant for an
+        // earlier, unannounced lane point ("no_speak_next_" bundle prefix),
+        // but its return value is discarded there (verified against current
+        // OsmAnd master, Sept. 2026) -- so it's unusable today. Once that's
+        // fixed upstream (or another source is found), only this line needs
+        // to change; PROTOCOL.md already carries LANE_DISTANCE_M/
+        // NEXT_LANE_DISTANCE_M as tags independent from MANEUVER_DISTANCE_M.
+        return new NavState(navigating, maneuver, nextDistance, exit, nextName, lanes, nextDistance,
+                nextManeuver, afterDistance, afterName, afterLanes, afterDistance,
                 info.getLeftDistance(), info.getLeftTime());
+    }
+
+    /**
+     * Parses the "next_turn_lanes"/"after_nextturn_lanes" bundle value --
+     * ExternalApiHelper#updateRouteDirectionInfo writes
+     * bundle.putString(prefix + "turn_lanes", Arrays.toString(tt.getLanes())),
+     * i.e. a literal Arrays.toString(int[]) such as "[5, 3, 9]" or "[]".
+     * Absent/null (no lane data at all) is the common case on plain
+     * cycleways -- turn:lanes is primarily a road-tagging concept.
+     */
+    private static List<Lane> parseLanes(String arraysToString) {
+        if (arraysToString == null) {
+            return Collections.emptyList();
+        }
+        String inner = arraysToString.trim();
+        if (inner.startsWith("[") && inner.endsWith("]")) {
+            inner = inner.substring(1, inner.length() - 1);
+        }
+        inner = inner.trim();
+        if (inner.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String[] parts = inner.split(",");
+        List<Lane> lanes = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            try {
+                lanes.add(Lane.fromOsmAndLaneValue(Integer.parseInt(part.trim())));
+            } catch (NumberFormatException e) {
+                Log.w(TAG, "unparsable lane value in \"" + arraysToString + "\"");
+            }
+        }
+        return lanes;
     }
 
     private void setStatus(String status) {

@@ -1,5 +1,7 @@
 package com.euphi.trailbridge;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -18,28 +20,39 @@ public final class NavState {
     public final int maneuverDistanceM;      // distance to that maneuver, metres
     public final int roundaboutExit;         // only meaningful if maneuver == ROUNDABOUT
     public final String streetName;          // street/road for that maneuver
+    public final List<Lane> lanes;           // lane guidance for that maneuver, left to right (often empty)
+    public final int laneDistanceM;          // distance to where `lanes` applies -- NOT necessarily maneuverDistanceM, see PROTOCOL.md
 
     public final int nextManeuver;           // the maneuver after this one
     public final int nextManeuverDistanceM;  // distance from THAT maneuver to the one after
     public final String nextStreetName;
+    public final List<Lane> nextLanes;       // lane guidance for nextManeuver
+    public final int nextLaneDistanceM;      // distance to where `nextLanes` applies
 
     public final int remainingDistanceM;     // to destination
     public final int remainingTimeS;         // to destination
 
     public static final NavState NONE = new NavState(
-            false, Maneuver.NONE, 0, 0, "", Maneuver.NONE, 0, "", 0, 0);
+            false, Maneuver.NONE, 0, 0, "", Collections.emptyList(), 0,
+            Maneuver.NONE, 0, "", Collections.emptyList(), 0, 0, 0);
 
     public NavState(boolean navigating, int maneuver, int maneuverDistanceM, int roundaboutExit,
-                     String streetName, int nextManeuver, int nextManeuverDistanceM,
-                     String nextStreetName, int remainingDistanceM, int remainingTimeS) {
+                     String streetName, List<Lane> lanes, int laneDistanceM,
+                     int nextManeuver, int nextManeuverDistanceM,
+                     String nextStreetName, List<Lane> nextLanes, int nextLaneDistanceM,
+                     int remainingDistanceM, int remainingTimeS) {
         this.navigating = navigating;
         this.maneuver = maneuver;
         this.maneuverDistanceM = maneuverDistanceM;
         this.roundaboutExit = roundaboutExit;
         this.streetName = streetName == null ? "" : streetName;
+        this.lanes = lanes == null ? Collections.emptyList() : lanes;
+        this.laneDistanceM = laneDistanceM;
         this.nextManeuver = nextManeuver;
         this.nextManeuverDistanceM = nextManeuverDistanceM;
         this.nextStreetName = nextStreetName == null ? "" : nextStreetName;
+        this.nextLanes = nextLanes == null ? Collections.emptyList() : nextLanes;
+        this.nextLaneDistanceM = nextLaneDistanceM;
         this.remainingDistanceM = remainingDistanceM;
         this.remainingTimeS = remainingTimeS;
     }
@@ -71,9 +84,16 @@ public final class NavState {
         if (maneuver == Maneuver.ROUNDABOUT) {
             s += " (exit " + roundaboutExit + ")";
         }
-        s += " on \"" + streetName + "\", then " + Maneuver.name(nextManeuver)
-                + " in " + nextManeuverDistanceM + "m on \"" + nextStreetName + "\""
-                + ", " + remainingDistanceM + "m / " + remainingTimeS + "s to destination}";
+        s += " on \"" + streetName + "\"";
+        if (!lanes.isEmpty()) {
+            s += ", lanes " + lanes + " in " + laneDistanceM + "m";
+        }
+        s += ", then " + Maneuver.name(nextManeuver)
+                + " in " + nextManeuverDistanceM + "m on \"" + nextStreetName + "\"";
+        if (!nextLanes.isEmpty()) {
+            s += ", lanes " + nextLanes + " in " + nextLaneDistanceM + "m";
+        }
+        s += ", " + remainingDistanceM + "m / " + remainingTimeS + "s to destination}";
         return s;
     }
 
@@ -84,15 +104,19 @@ public final class NavState {
         NavState n = (NavState) o;
         return navigating == n.navigating && maneuver == n.maneuver
                 && maneuverDistanceM == n.maneuverDistanceM && roundaboutExit == n.roundaboutExit
-                && streetName.equals(n.streetName) && nextManeuver == n.nextManeuver
+                && streetName.equals(n.streetName) && lanes.equals(n.lanes)
+                && laneDistanceM == n.laneDistanceM
+                && nextManeuver == n.nextManeuver
                 && nextManeuverDistanceM == n.nextManeuverDistanceM
-                && nextStreetName.equals(n.nextStreetName)
+                && nextStreetName.equals(n.nextStreetName) && nextLanes.equals(n.nextLanes)
+                && nextLaneDistanceM == n.nextLaneDistanceM
                 && remainingDistanceM == n.remainingDistanceM && remainingTimeS == n.remainingTimeS;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(navigating, maneuver, maneuverDistanceM, roundaboutExit, streetName,
-                nextManeuver, nextManeuverDistanceM, nextStreetName, remainingDistanceM, remainingTimeS);
+                lanes, laneDistanceM, nextManeuver, nextManeuverDistanceM, nextStreetName, nextLanes,
+                nextLaneDistanceM, remainingDistanceM, remainingTimeS);
     }
 }

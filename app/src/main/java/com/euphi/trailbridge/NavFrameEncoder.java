@@ -3,6 +3,7 @@ package com.euphi.trailbridge;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Encodes a NavState into the wire format defined in PROTOCOL.md. Keep the
@@ -25,6 +26,10 @@ public final class NavFrameEncoder {
     public static final int TAG_NEXT_STREET_NAME = 0x07;
     public static final int TAG_REMAINING_DISTANCE_M = 0x08;
     public static final int TAG_REMAINING_TIME_S = 0x09;
+    public static final int TAG_LANES = 0x0A;
+    public static final int TAG_NEXT_LANES = 0x0B;
+    public static final int TAG_LANE_DISTANCE_M = 0x0C;
+    public static final int TAG_NEXT_LANE_DISTANCE_M = 0x0D;
 
     /** Comfortably under the 253 usable bytes of a 256-byte ATT_MTU, and
      *  still short if MTU negotiation hasn't finished when we first send. */
@@ -53,11 +58,19 @@ public final class NavFrameEncoder {
             writeU8(out, TAG_ROUNDABOUT_EXIT, s.roundaboutExit);
         }
         writeString(out, TAG_STREET_NAME, s.streetName);
+        if (!s.lanes.isEmpty()) {
+            writeLanes(out, TAG_LANES, s.lanes);
+            writeU32(out, TAG_LANE_DISTANCE_M, s.laneDistanceM);
+        }
 
         if (s.nextManeuver != Maneuver.NONE) {
             writeU8(out, TAG_NEXT_MANEUVER, s.nextManeuver);
             writeU32(out, TAG_NEXT_MANEUVER_DISTANCE_M, s.nextManeuverDistanceM);
             writeString(out, TAG_NEXT_STREET_NAME, s.nextStreetName);
+            if (!s.nextLanes.isEmpty()) {
+                writeLanes(out, TAG_NEXT_LANES, s.nextLanes);
+                writeU32(out, TAG_NEXT_LANE_DISTANCE_M, s.nextLaneDistanceM);
+            }
         }
 
         writeU32(out, TAG_REMAINING_DISTANCE_M, s.remainingDistanceM);
@@ -95,5 +108,17 @@ public final class NavFrameEncoder {
         out.write(tag);
         out.write(bytes.length);
         out.write(bytes, 0, bytes.length);
+    }
+
+    /** 4 bytes per lane: primary/secondary/tertiary Maneuver code + ACTIVE flag, see PROTOCOL.md. */
+    private static void writeLanes(ByteArrayOutputStream out, int tag, List<Lane> lanes) {
+        out.write(tag);
+        out.write(lanes.size() * 4);
+        for (Lane l : lanes) {
+            out.write(l.primary & 0xFF);
+            out.write(l.secondary & 0xFF);
+            out.write(l.tertiary & 0xFF);
+            out.write(l.active ? 1 : 0);
+        }
     }
 }
