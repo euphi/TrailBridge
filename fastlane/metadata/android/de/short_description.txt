@@ -1,0 +1,1 @@
+Leitet OsmAnds Abbiegehinweise per Bluetooth LE an einen DIY-Radcomputer

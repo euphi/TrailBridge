@@ -1,0 +1,1 @@
+Relays OsmAnd turn-by-turn navigation to a DIY bike computer via Bluetooth LE

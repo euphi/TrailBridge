@@ -1,0 +1,5 @@
+Erste Veröffentlichung:
+• Weiterleitung der OsmAnd-Navigation per BLE (Manöver, Distanz, Straßennamen, übernächstes Manöver, Restdistanz/-zeit)
+• Fahrspur-Informationen
+• Eigener BLE-Dienst mit der GPS-Position des Handys
+• Läuft als Vordergrund-Dienst auch bei gesperrtem Bildschirm

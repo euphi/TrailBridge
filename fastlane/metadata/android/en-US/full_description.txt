@@ -1,0 +1,23 @@
+<p>TrailBridge is a companion app that relays <b>OsmAnd</b>'s turn-by-turn navigation via Bluetooth LE to a DIY bike computer – a replacement for Komoot's discontinued BLE navigation service.</p>
+
+<p>Your phone stays in your pocket, OsmAnd navigates offline, and the bike computer on your handlebar shows the next turn.</p>
+
+<p><b>Features</b></p>
+<ul>
+<li>Reads the active route through OsmAnd's official AIDL API: maneuver, distance, street name, the maneuver after that, remaining distance and time</li>
+<li>Lane guidance, whenever OsmAnd provides it</li>
+<li>A second, independent BLE service with the phone's GPS position – works even without OsmAnd running</li>
+<li>Runs as a foreground service, so it keeps working with the screen locked</li>
+<li>Compact, openly documented TLV protocol (PROTOCOL.md in the repository), pushed via Indicate instead of polling</li>
+</ul>
+
+<p><b>Requirements</b></p>
+<ul>
+<li>OsmAnd (or OsmAnd+) installed; TrailBridge has to be enabled once in OsmAnd under Menu → Plugins</li>
+<li>A BLE receiver that speaks the protocol – the reference firmware is the open-source <a href="https://github.com/euphi/TRGB-BikeComputer">TRGB-BikeComputer</a> (ESP32)</li>
+<li>A phone that supports the BLE peripheral role</li>
+</ul>
+
+<p>The app's user interface is currently German only.</p>
+
+<p>TrailBridge is an independent project and is not affiliated with OsmAnd B.V. or Komoot.</p>

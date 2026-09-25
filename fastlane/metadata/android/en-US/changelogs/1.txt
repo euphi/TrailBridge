@@ -1,0 +1,5 @@
+First release:
+• Relays OsmAnd navigation via BLE (maneuver, distance, street names, next maneuver, remaining distance/time)
+• Lane guidance
+• Separate BLE service with the phone's GPS position
+• Runs as a foreground service, also with the screen locked
