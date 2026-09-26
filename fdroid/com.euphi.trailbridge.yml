@@ -11,6 +11,7 @@ AutoName: TrailBridge
 
 RepoType: git
 Repo: https://github.com/euphi/TrailBridge.git
+Binaries: https://github.com/euphi/TrailBridge/releases/download/v%v/TrailBridge-v%v.apk
 
 Builds:
   - versionName: 0.4.1
@@ -19,6 +20,8 @@ Builds:
     subdir: app
     gradle:
       - yes
+
+AllowedAPKSigningKeys: 2e850b640646af5c76600bd444bc8c80fd1e2f68e88d3cd20bca4432804e4c1f
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$

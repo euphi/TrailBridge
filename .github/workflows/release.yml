@@ -52,11 +52,15 @@ jobs:
             exit 1
           fi
 
-      - name: Set up JDK 17
+      # Gleiche Java-Hauptversion wie F-Droids Buildserver (Debian trixie,
+      # default-jdk = OpenJDK 21) -- F-Droid baut die APK nach und
+      # veröffentlicht sie nur, wenn sie bis auf die Signatur bytegleich mit
+      # unserer ist (Reproducible Build, siehe FDROID.md).
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       # Kein eigener Android-SDK-Setup-Schritt: die ubuntu-latest-Runner
       # bringen bereits ein vorinstalliertes, lizenz-akzeptiertes Android SDK
@@ -70,6 +74,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.14.2
+
+      # F-Droid übernimmt unsere Signatur -- ein unsignierter Tag-Release wäre
+      # dort unbrauchbar, deshalb bei Tag-Pushes ohne Keystore hart abbrechen.
+      - name: Require signing key for tag releases
+        if: ${{ github.event_name == 'push' && env.HAS_KEYSTORE != 'true' }}
+        run: |
+          echo "::error::Secret ANDROID_KEYSTORE_BASE64 fehlt -- Tag-Releases müssen signiert sein (F-Droid Reproducible Build)"
+          exit 1
 
       # Nur ausgeführt, wenn das Secret gesetzt ist -- ohne Keystore baut
       # assembleRelease trotzdem, nur eben unsigniert (siehe app/build.gradle).

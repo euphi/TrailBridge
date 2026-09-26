@@ -10,11 +10,57 @@ Was schon im Repo vorbereitet ist:
 | Kein Google-Abhängigkeits-Blob in der APK | `dependenciesInfo` in `app/build.gradle` |
 | Lizenz GPL-3.0-or-later | [`LICENSE`](LICENSE) -- nötig, weil die übernommenen `net.osmand.aidlapi`-Dateien aus dem GPLv3-OsmAnd-Repo stammen |
 | Check Tag == versionName | Release-Workflow bricht bei Tag-Push ab, wenn die beiden nicht passen |
+| Reproducible Build mit eigenem Key | `Binaries:` + `AllowedAPKSigningKeys` im Rezept, CI auf JDK 21, siehe unten |
 
-Signiert wird mit **F-Droids eigenem Key**. Folge: Die F-Droid-APK und die
-APK aus den GitHub-Releases lassen sich **nicht** gegenseitig updaten --
-wer wechseln will, muss erst deinstallieren. Am besten so in der
-GitHub-Release-Beschreibung erwähnen.
+## Signatur: Reproducible Build mit eigenem Key
+
+F-Droid baut jede Version selbst aus dem Tag nach, lädt unsere signierte
+APK aus dem GitHub-Release (`Binaries:` im Rezept) und vergleicht beide.
+Sind sie bis auf die Signatur **bytegleich**, veröffentlicht F-Droid
+**unsere** APK mit unserer Signatur. F-Droid- und GitHub-APK sind damit
+untereinander update-kompatibel. Weicht auch nur ein Byte ab, veröffentlicht
+F-Droid diese Version nicht (alte Version bleibt stehen).
+
+- Erlaubter Signaturschlüssel (`AllowedAPKSigningKeys`, SHA-256 des
+  Zertifikats "CN=Ian Hubbertz"):
+  `2e850b640646af5c76600bd444bc8c80fd1e2f68e88d3cd20bca4432804e4c1f`
+- Der Keystore (GitHub-Secrets, siehe BUILD.md) darf **nie verloren gehen**
+  und nie wechseln -- ohne ihn keine Updates mehr, weder auf F-Droid noch
+  auf GitHub.
+- Der Release-Workflow bricht bei Tag-Pushes ohne Keystore ab.
+- Damit die Builds gleich bleiben: CI nutzt JDK 21 (= F-Droids Buildserver,
+  Debian trixie `default-jdk`) und Gradle 8.14.2 (steht in
+  `gradle/wrapper/gradle-wrapper.properties`, das nutzt auch F-Droid). Bei
+  Upgrades von JDK, Gradle oder AGP immer beide Seiten mitdenken.
+
+Fingerprint selbst prüfen:
+```
+apksigner verify --print-certs TrailBridge-v0.4.1.apk | grep SHA-256
+# oder direkt am Keystore (Doppelpunkte entfernen, klein schreiben):
+keytool -list -v -keystore trailbridge-release.keystore -alias trailbridge | grep SHA256
+```
+
+Reproduzierbarkeit lokal testen (optional, braucht `pip install apksigcopier`):
+```
+git checkout v0.4.1
+gradle clean assembleRelease      # ohne ANDROID_KEYSTORE_PATH -> unsigniert
+apksigcopier compare TrailBridge-v0.4.1.apk \
+  --unsigned app/build/outputs/apk/release/app-release-unsigned.apk && echo reproduzierbar
+```
+Verbindlich ist aber der Testbuild in der CI des fdroiddata-Forks: Mit
+`Binaries:` im Rezept macht `fdroid build` genau diesen Vergleich.
+
+Typische Ursachen, falls der Vergleich scheitert (Diff-Ausgabe im CI-Log
+zeigt die abweichende Datei):
+- `classes.dex` weicht ab -> unterschiedliche JDK-Hauptversion.
+- `assets/dexopt/baseline.prof(m)` weicht ab -> Baseline-Profile in
+  `app/build.gradle` abschalten:
+  `tasks.configureEach { if (name.contains("ArtProfile")) enabled = false }`
+- `META-INF/version-control-info.textproto` enthält den Commit-Hash; passt,
+  solange F-Droid denselben Tag baut.
+
+Jede solche Korrektur braucht eine neue Version (Tag), ein bereits
+veröffentlichter Release lässt sich nicht nachträglich ändern.
 
 ## Versionsschema
 
