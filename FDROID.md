@@ -55,6 +55,11 @@ zeigt die abweichende Datei):
 - `classes.dex` weicht ab -> unterschiedliche JDK-Hauptversion.
 - `assets/dexopt/baseline.prof(m)` weicht ab -> ist seit 0.4.2 schon
   erledigt: `app/build.gradle` erzeugt keine Baseline-Profile mehr.
+- R8 (seit 0.4.3 aktiv) ist deterministisch; die Regeln stehen in
+  `app/proguard-rules.pro`. Neue Klassen, die per Reflection oder über
+  Binder/Parcel-Klassennamen angesprochen werden, brauchen dort eine
+  `-keep`-Regel -- sonst fehlen sie im Release-Build (Debug-Builds laufen
+  ohne R8 und zeigen das Problem nicht).
 - `META-INF/version-control-info.textproto` enthält den Commit-Hash; passt,
   solange F-Droid denselben Tag baut.
 
@@ -73,7 +78,7 @@ veröffentlichter Release lässt sich nicht nachträglich ändern.
 
 1. **Release-Tag setzen** (versionName/versionCode stehen schon auf 0.4.2/402).
    Frühere Tags taugen nicht als erste F-Droid-Version: `v0.4.0` hat noch
-   versionCode 1 und die MIT-Lizenz, `v0.4.2` wurde mit JDK 17 gebaut und
+   versionCode 1 und die MIT-Lizenz, `v0.4.1` wurde mit JDK 17 gebaut und
    ist deshalb nicht bytegleich zu F-Droids JDK-21-Build.
    ```
    git tag v0.4.2

@@ -1,0 +1,1 @@
+• Release-Build mit R8: deutlich kleinere APK

@@ -11,11 +11,11 @@ android {
         minSdk 26
         targetSdk 35
         // Schema: versionCode = MAJOR*10000 + MINOR*100 + PATCH, versionName
-        // = Git-Tag ohne "v" (Tag v0.4.2 -> "0.4.2" / 402). F-Droid erkennt
+        // = Git-Tag ohne "v" (Tag v0.4.3 -> "0.4.3" / 403). F-Droid erkennt
         // neue Versionen über die Tags und prüft genau diese beiden Werte --
         // vor jedem Release-Tag hier hochzählen, siehe FDROID.md.
-        versionCode 402
-        versionName "0.4.2"
+        versionCode 403
+        versionName "0.4.3"
     }
 
     // Kein von Google verschlüsselter Abhängigkeits-Blob in der APK -- F-Droid
@@ -50,7 +50,13 @@ android {
             // nothing special yet
         }
         release {
-            minifyEnabled false
+            // R8: entfernt ungenutzten Code (v.a. aus androidx.appcompat) und
+            // ungenutzte Ressourcen -- APK wird deutlich kleiner. Regeln in
+            // proguard-rules.pro; die OsmAnd-AIDL-Klassen MÜSSEN dort
+            // geschützt bleiben.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (System.getenv("ANDROID_KEYSTORE_PATH")) {
                 signingConfig signingConfigs.release
             }
