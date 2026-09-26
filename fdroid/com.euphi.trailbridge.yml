@@ -14,9 +14,9 @@ Repo: https://github.com/euphi/TrailBridge.git
 Binaries: https://github.com/euphi/TrailBridge/releases/download/v%v/TrailBridge-v%v.apk
 
 Builds:
-  - versionName: 0.4.1
-    versionCode: 401
-    commit: v0.4.1
+  - versionName: 0.4.2
+    versionCode: 402
+    commit: v0.4.2
     subdir: app
     gradle:
       - yes
@@ -25,5 +25,5 @@ AllowedAPKSigningKeys: 2e850b640646af5c76600bd444bc8c80fd1e2f68e88d3cd20bca44328
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
-CurrentVersion: 0.4.1
-CurrentVersionCode: 401
+CurrentVersion: 0.4.2
+CurrentVersionCode: 402

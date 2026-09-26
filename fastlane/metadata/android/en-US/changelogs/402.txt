@@ -1,0 +1,1 @@
+• Release build switched to JDK 21 and baseline profiles disabled – required for reproducible F-Droid builds with the developer signature

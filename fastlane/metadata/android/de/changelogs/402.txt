@@ -1,0 +1,1 @@
+• Release-Build auf JDK 21 umgestellt und Baseline-Profile abgeschaltet – Voraussetzung für reproduzierbare F-Droid-Builds mit Entwickler-Signatur

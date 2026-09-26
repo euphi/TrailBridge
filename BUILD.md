@@ -2,10 +2,12 @@
 
 ## Setup unter Gentoo (Kommandozeile, kein Android Studio)
 
-1. **JDK** (AGP 9.x will JDK 17, auch als Minimum für Gradle 9 selbst):
+1. **JDK 21** (dieselbe Hauptversion wie der Release-Workflow und F-Droids
+   Buildserver -- nur so ist ein lokaler Build bytegleich zum Release, siehe
+   FDROID.md; für reine Debug-Builds reicht auch JDK 17):
    ```
-   emerge --ask dev-java/openjdk:17
-   eselect java-vm set system openjdk-17
+   emerge --ask dev-java/openjdk:21
+   eselect java-vm set system openjdk-21
    ```
 2. **Gradle** (nutzt hier das System-Gradle statt eines Wrappers, spart dir
    den Wrapper-JAR-Download):

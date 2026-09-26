@@ -11,11 +11,11 @@ android {
         minSdk 26
         targetSdk 35
         // Schema: versionCode = MAJOR*10000 + MINOR*100 + PATCH, versionName
-        // = Git-Tag ohne "v" (Tag v0.4.1 -> "0.4.1" / 401). F-Droid erkennt
+        // = Git-Tag ohne "v" (Tag v0.4.2 -> "0.4.2" / 402). F-Droid erkennt
         // neue Versionen über die Tags und prüft genau diese beiden Werte --
         // vor jedem Release-Tag hier hochzählen, siehe FDROID.md.
-        versionCode 401
-        versionName "0.4.1"
+        versionCode 402
+        versionName "0.4.2"
     }
 
     // Kein von Google verschlüsselter Abhängigkeits-Blob in der APK -- F-Droid
@@ -65,4 +65,14 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
+}
+
+// Baseline-Profile (assets/dexopt/baseline.prof) nicht erzeugen: die Datei
+// ist zwischen Builds nicht immer bytegleich und würde F-Droids
+// Reproducible-Build-Vergleich scheitern lassen (siehe FDROID.md). Für eine
+// App dieser Größe ist der Startzeit-Gewinn vernachlässigbar.
+tasks.configureEach { task ->
+    if (task.name.contains("ArtProfile")) {
+        task.enabled = false
+    }
 }

@@ -35,16 +35,16 @@ F-Droid diese Version nicht (alte Version bleibt stehen).
 
 Fingerprint selbst prüfen:
 ```
-apksigner verify --print-certs TrailBridge-v0.4.1.apk | grep SHA-256
+apksigner verify --print-certs TrailBridge-v0.4.2.apk | grep SHA-256
 # oder direkt am Keystore (Doppelpunkte entfernen, klein schreiben):
 keytool -list -v -keystore trailbridge-release.keystore -alias trailbridge | grep SHA256
 ```
 
 Reproduzierbarkeit lokal testen (optional, braucht `pip install apksigcopier`):
 ```
-git checkout v0.4.1
+git checkout v0.4.2
 gradle clean assembleRelease      # ohne ANDROID_KEYSTORE_PATH -> unsigniert
-apksigcopier compare TrailBridge-v0.4.1.apk \
+apksigcopier compare TrailBridge-v0.4.2.apk \
   --unsigned app/build/outputs/apk/release/app-release-unsigned.apk && echo reproduzierbar
 ```
 Verbindlich ist aber der Testbuild in der CI des fdroiddata-Forks: Mit
@@ -53,9 +53,8 @@ Verbindlich ist aber der Testbuild in der CI des fdroiddata-Forks: Mit
 Typische Ursachen, falls der Vergleich scheitert (Diff-Ausgabe im CI-Log
 zeigt die abweichende Datei):
 - `classes.dex` weicht ab -> unterschiedliche JDK-Hauptversion.
-- `assets/dexopt/baseline.prof(m)` weicht ab -> Baseline-Profile in
-  `app/build.gradle` abschalten:
-  `tasks.configureEach { if (name.contains("ArtProfile")) enabled = false }`
+- `assets/dexopt/baseline.prof(m)` weicht ab -> ist seit 0.4.2 schon
+  erledigt: `app/build.gradle` erzeugt keine Baseline-Profile mehr.
 - `META-INF/version-control-info.textproto` enthält den Commit-Hash; passt,
   solange F-Droid denselben Tag baut.
 
@@ -64,20 +63,21 @@ veröffentlichter Release lässt sich nicht nachträglich ändern.
 
 ## Versionsschema
 
-- `versionName` = Git-Tag ohne `v` (Tag `v0.4.1` -> `0.4.1`)
-- `versionCode` = `MAJOR*10000 + MINOR*100 + PATCH` (0.4.1 -> 401, 1.2.3 -> 10203)
+- `versionName` = Git-Tag ohne `v` (Tag `v0.4.2` -> `0.4.2`)
+- `versionCode` = `MAJOR*10000 + MINOR*100 + PATCH` (0.4.2 -> 402, 1.2.3 -> 10203)
 - Betas (`vX.Y.Z-betaN`): `versionName` = `X.Y.Z-betaN`, `versionCode` =
   Code der kommenden finalen Version − 10 + N (0.5.0-beta1 -> 491).
   F-Droid ignoriert Beta-Tags (`UpdateCheckMode` filtert auf `vX.Y.Z`).
 
 ## Einmalig: Erstes Einreichen
 
-1. **Release-Tag setzen** (versionName/versionCode stehen schon auf 0.4.1/401).
-   `v0.4.0` taugt nicht als erste F-Droid-Version: dort steht
-   noch versionCode 1, die MIT-Lizenz und kein `dependenciesInfo`-Block.
+1. **Release-Tag setzen** (versionName/versionCode stehen schon auf 0.4.2/402).
+   Frühere Tags taugen nicht als erste F-Droid-Version: `v0.4.0` hat noch
+   versionCode 1 und die MIT-Lizenz, `v0.4.2` wurde mit JDK 17 gebaut und
+   ist deshalb nicht bytegleich zu F-Droids JDK-21-Build.
    ```
-   git tag v0.4.1
-   git push origin v0.4.1
+   git tag v0.4.2
+   git push origin v0.4.2
    ```
 2. **Auf GitLab** `https://gitlab.com/fdroid/fdroiddata` forken, neuen Branch
    `com.euphi.trailbridge` anlegen.
