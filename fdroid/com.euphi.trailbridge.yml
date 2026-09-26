@@ -16,7 +16,7 @@ Binaries: https://github.com/euphi/TrailBridge/releases/download/v%v/TrailBridge
 Builds:
   - versionName: 0.4.2
     versionCode: 402
-    commit: v0.4.2
+    commit: 8ddfd2c3f044a413f59a96be2a0a8c8f4c94a0de
     subdir: app
     gradle:
       - yes

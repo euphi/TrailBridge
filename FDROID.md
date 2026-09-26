@@ -87,6 +87,8 @@ veröffentlichter Release lässt sich nicht nachträglich ändern.
    so aussieht, wie `fdroid rewritemeta` sie schreibt, und das entfernt
    Kommentare -- jede `#`-Zeile lässt den Job fehlschlagen. Nur finale Tags
    (`vX.Y.Z`) zählen wegen des Regex bei `UpdateCheckMode`.
+   Bei `commit:` verlangen die F-Droid-Maintainer den **vollen Commit-Hash**,
+   nicht den Tag (`git rev-parse vX.Y.Z^{commit}`).
 4. Pushen -- die CI im Fork läuft `fdroid lint` und einen Testbuild. Wenn
    grün: Merge Request gegen `fdroid/fdroiddata` öffnen, Vorlage "App
    inclusion" auswählen und die Checkliste ausfüllen.
