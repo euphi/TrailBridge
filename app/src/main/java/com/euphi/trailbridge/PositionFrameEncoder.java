@@ -24,6 +24,7 @@ public final class PositionFrameEncoder {
     public static final int TAG_BEARING_DEG_X100 = 0x05;
     public static final int TAG_ACCURACY_M_X10 = 0x06;
     public static final int TAG_FIX_AGE_MS = 0x07;
+    public static final int TAG_UTC_TIME_MS = 0x08;
 
     private PositionFrameEncoder() {
     }
@@ -58,6 +59,9 @@ public final class PositionFrameEncoder {
         }
         long ageMs = SystemClock.elapsedRealtime() - s.fixElapsedRealtimeMs;
         writeS32(out, TAG_FIX_AGE_MS, (int) ageMs);
+        if (s.fixUtcTimeMs > 0) {
+            writeS64(out, TAG_UTC_TIME_MS, s.fixUtcTimeMs);
+        }
 
         return out.toByteArray();
     }
@@ -71,6 +75,14 @@ public final class PositionFrameEncoder {
         out.write((value >>> 8) & 0xFF);
         out.write((value >>> 16) & 0xFF);
         out.write((value >>> 24) & 0xFF);
+    }
+
+    private static void writeS64(ByteArrayOutputStream out, int tag, long value) {
+        out.write(tag);
+        out.write(8);
+        for (int i = 0; i < 8; i++) {
+            out.write((int) (value >>> (8 * i)) & 0xFF);
+        }
     }
 
     private static void writeU16(ByteArrayOutputStream out, int tag, int value) {

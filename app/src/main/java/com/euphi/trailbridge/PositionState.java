@@ -29,15 +29,20 @@ public final class PositionState {
      *  FIX_AGE_MS fresh at send time, including on heartbeat resends. */
     public final long fixElapsedRealtimeMs;
 
+    /** UTC time of the fix, ms since the Unix epoch (Location.getTime()), 0 if
+     *  unknown. Sent as UTC_TIME_MS so the BikeComputer can set its clock
+     *  without WLAN/NTP. */
+    public final long fixUtcTimeMs;
+
     public static final PositionState NONE =
-            new PositionState(false, 0, 0, false, 0, false, 0, false, 0, false, 0, 0L);
+            new PositionState(false, 0, 0, false, 0, false, 0, false, 0, false, 0, 0L, 0L);
 
     public PositionState(boolean hasFix, int latitudeE7, int longitudeE7,
                           boolean hasAltitude, int altitudeM,
                           boolean hasSpeed, int speedCms,
                           boolean hasBearing, int bearingDegX100,
                           boolean hasAccuracy, int accuracyMx10,
-                          long fixElapsedRealtimeMs) {
+                          long fixElapsedRealtimeMs, long fixUtcTimeMs) {
         this.hasFix = hasFix;
         this.latitudeE7 = latitudeE7;
         this.longitudeE7 = longitudeE7;
@@ -50,6 +55,7 @@ public final class PositionState {
         this.hasAccuracy = hasAccuracy;
         this.accuracyMx10 = accuracyMx10;
         this.fixElapsedRealtimeMs = fixElapsedRealtimeMs;
+        this.fixUtcTimeMs = fixUtcTimeMs;
     }
 
     @Override

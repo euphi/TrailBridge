@@ -262,6 +262,7 @@ TLV-Eintrag: `Tag (1 Byte) | Länge N (1 Byte) | Wert (N Byte)`
 | 0x05 | BEARING_DEG_X100 | 2 | uint16 LE, Grad × 100 (0..35999) | nur wenn der Fix einen Kurs liefert |
 | 0x06 | ACCURACY_M_X10 | 2 | uint16 LE, Meter × 10 (horizontale Genauigkeit) | nur wenn der Fix eine Genauigkeit liefert |
 | 0x07 | FIX_AGE_MS | 4 | uint32 LE, Millisekunden seit diesem Fix | immer |
+| 0x08 | UTC_TIME_MS | 8 | uint64 LE, UTC-Zeit des Fixes in ms seit 1970-01-01 (`Location.getTime()`) | wenn der Fix eine Zeit hat (> 0) |
 
 E7-Fixpunkt für Lat/Lon (statt Gleitkomma) aus demselben Grund wie überall
 sonst im TLV-Format: festes, plattformunabhängiges Byte-Layout, kein
@@ -274,6 +275,15 @@ o.ä.) -- wird bei jedem Senden aus `SystemClock.elapsedRealtime() -
 location.getElapsedRealtimeNanos()/1_000_000` neu berechnet, ist also auch
 bei Heartbeat-Resends korrekt und nicht auf den ursprünglichen Fix-Zeitpunkt
 eingefroren.
+
+UTC_TIME_MS ist die Zeitquelle für die Uhr des BikeComputers, wenn kein WLAN
+(NTP) da ist. Bei `GPS_PROVIDER` ist das die Satellitenzeit, also unabhängig
+von der Handy-Uhr. Die aktuelle Zeit beim Senden ist
+`UTC_TIME_MS + FIX_AGE_MS` -- beide Werte kommen aus demselben Frame, der
+Empfänger muss also nicht wissen, wann der Fix entstand. Die BLE-Latenz
+(typisch < 100 ms) bleibt unberücksichtigt. Nachträglich ergänzt, ohne
+Versionssprung: Firmware, die den Tag nicht kennt, überspringt ihn über die
+Länge; eine App ohne den Tag stellt eben keine Uhr.
 
 ### Beispiel
 
@@ -291,7 +301,7 @@ Genauigkeit, vor 320 ms:
 07 04 40 01 00 00                                  FIX_AGE_MS = 320
 ```
 
-40 Bytes gesamt -- passt locker in die ausgehandelte ATT-MTU.
+40 Bytes gesamt (mit UTC_TIME_MS 50) -- passt locker in die ausgehandelte ATT-MTU.
 
 ## Warum Indicate statt Notify
 

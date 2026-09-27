@@ -116,6 +116,8 @@ public class GpsLink {
                 // Same elapsed-realtime base as SystemClock.elapsedRealtime(),
                 // so PositionFrameEncoder can compute a correct age even on a
                 // heartbeat resend, not just at the moment of the fix.
-                loc.getElapsedRealtimeNanos() / 1_000_000L);
+                loc.getElapsedRealtimeNanos() / 1_000_000L,
+                // UTC of the fix; for GPS_PROVIDER this is the satellite time.
+                loc.getTime());
     }
 }
