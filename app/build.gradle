@@ -14,8 +14,8 @@ android {
         // = Git-Tag ohne "v" (Tag v0.4.3 -> "0.4.3" / 403). F-Droid erkennt
         // neue Versionen über die Tags und prüft genau diese beiden Werte --
         // vor jedem Release-Tag hier hochzählen, siehe FDROID.md.
-        versionCode 403
-        versionName "0.4.3"
+        versionCode 404
+        versionName "0.4.4-rc1"
     }
 
     // Kein von Google verschlüsselter Abhängigkeits-Blob in der APK -- F-Droid

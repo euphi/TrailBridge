@@ -1,0 +1,1 @@
+• GPS service sends the fix's UTC time (tag UTC_TIME_MS): the TRGB-BikeComputer sets its clock from it without WLAN

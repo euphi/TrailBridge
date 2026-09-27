@@ -73,6 +73,12 @@ veröffentlichter Release lässt sich nicht nachträglich ändern.
 - Betas (`vX.Y.Z-betaN`): `versionName` = `X.Y.Z-betaN`, `versionCode` =
   Code der kommenden finalen Version − 10 + N (0.5.0-beta1 -> 491).
   F-Droid ignoriert Beta-Tags (`UpdateCheckMode` filtert auf `vX.Y.Z`).
+- Release-Candidates für Patch-Versionen (`vX.Y.Z-rcN`): `versionName` =
+  `X.Y.Z-rcN`, `versionCode` = Code der kommenden finalen Version
+  (0.4.4-rc1 -> 404). Die Beta-Formel ergäbe hier 395 und läge damit unter
+  0.4.3 (403) -- ließe sich also nicht drüber installieren. Die finale
+  Version behält denselben Code; Android erlaubt das Update bei gleichem
+  `versionCode`, F-Droid sieht nur den finalen Tag.
 
 ## Einmalig: Erstes Einreichen
 

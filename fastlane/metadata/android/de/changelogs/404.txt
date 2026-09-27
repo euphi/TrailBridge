@@ -1,0 +1,1 @@
+• GPS-Service sendet die UTC-Zeit des Fixes (Tag UTC_TIME_MS): der TRGB-BikeComputer stellt damit seine Uhr ohne WLAN
