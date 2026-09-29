@@ -6,17 +6,27 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.OpenableColumns;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,6 +63,20 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     private TextView bleStatusView;
     private TextView navStateView;
     private TextView positionStateView;
+    private TextView routeInfoView;
+    private Button routeToggleButton;
+    private boolean routeLoaded = false;
+    private boolean routeActive = false;
+
+    /** GPX-Datei, die per "Öffnen mit"/Teilen kam, bevor der Dienst gebunden war. */
+    @Nullable private Uri pendingGpx;
+
+    private static final int MAX_GPX_BYTES = 20 * 1024 * 1024;
+
+    private final ActivityResultLauncher<String[]> gpxPicker =
+            registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null) loadGpx(uri);
+            });
 
     @Nullable private TrailBridgeService service;
     private boolean bound = false;
@@ -69,6 +93,79 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         findViewById(R.id.retryButton).setOnClickListener(v -> {
             if (service != null) service.retrySubscribe();
         });
+        routeInfoView = findViewById(R.id.routeInfoView);
+        routeToggleButton = findViewById(R.id.routeToggleButton);
+        findViewById(R.id.loadGpxButton).setOnClickListener(v -> gpxPicker.launch(new String[]{"*/*"}));
+        routeToggleButton.setOnClickListener(v -> {
+            if (service == null) return;
+            if (routeActive) service.stopRoute(); else service.startRoute();
+        });
+        updateRouteButton();
+        handleIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    /** GPX per "Öffnen mit" (VIEW) oder Teilen (SEND). */
+    private void handleIntent(@Nullable Intent intent) {
+        if (intent == null) return;
+        Uri uri = null;
+        if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+            uri = intent.getData();
+        } else if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        }
+        if (uri == null) return;
+        // Nur einmal verarbeiten, auch wenn die Activity neu erzeugt wird.
+        intent.setAction(Intent.ACTION_MAIN);
+        loadGpx(uri);
+    }
+
+    private void loadGpx(Uri uri) {
+        if (service == null) {
+            pendingGpx = uri;   // onServiceConnected holt das nach
+            return;
+        }
+        TrailBridgeService target = service;
+        String name = displayName(uri);
+        new Thread(() -> {
+            try (InputStream in = getContentResolver().openInputStream(uri)) {
+                if (in == null) throw new IOException("Datei nicht lesbar");
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                byte[] buf = new byte[16384];
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    out.write(buf, 0, n);
+                    if (out.size() > MAX_GPX_BYTES) throw new IOException("Datei größer als 20 MB");
+                }
+                target.loadGpx(out.toByteArray(), name);
+            } catch (IOException | SecurityException e) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        "GPX konnte nicht gelesen werden: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }, "gpx-read").start();
+    }
+
+    private String displayName(Uri uri) {
+        try (Cursor c = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME},
+                null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                String n = c.getString(0);
+                if (n != null) return n.replaceFirst("(?i)\\.gpx$", "");
+            }
+        } catch (RuntimeException ignored) {
+        }
+        return "Route";
+    }
+
+    private void updateRouteButton() {
+        routeToggleButton.setEnabled(routeLoaded);
+        routeToggleButton.setText(routeActive ? R.string.route_stop : R.string.route_start);
     }
 
     @Override
@@ -151,6 +248,11 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
             service = ((TrailBridgeService.LocalBinder) binder).getService();
             bound = true;
             service.setUiListener(MainActivity.this);
+            if (pendingGpx != null) {
+                Uri uri = pendingGpx;
+                pendingGpx = null;
+                loadGpx(uri);
+            }
         }
 
         @Override
@@ -185,6 +287,18 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     @Override
     public void onSubscriberCountChanged(int count) {
         runOnUiThread(() -> bleStatusView.setText("BLE: Advertising, " + count + " Abonnent(en)"));
+    }
+
+    @Override
+    public void onRouteChanged(String summary, boolean active) {
+        runOnUiThread(() -> {
+            routeActive = active;
+            // "" = keine Route geladen; Fehlermeldungen lassen den Ladezustand stehen
+            if (summary.isEmpty()) routeLoaded = false;
+            else if (!summary.startsWith("GPX-Import fehlgeschlagen")) routeLoaded = true;
+            routeInfoView.setText(summary.isEmpty() ? getString(R.string.route_none) : summary);
+            updateRouteButton();
+        });
     }
 
     @Override

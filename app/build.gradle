@@ -71,6 +71,9 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
+
+    // Nur fuer die JVM-Unit-Tests (app/src/test), landet nicht in der APK.
+    testImplementation 'junit:junit:4.13.2'
 }
 
 // Baseline-Profile (assets/dexopt/baseline.prof) nicht erzeugen: die Datei

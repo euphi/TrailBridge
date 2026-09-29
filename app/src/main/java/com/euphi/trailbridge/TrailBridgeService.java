@@ -8,15 +8,28 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Haelt OsmAndLink und BikeComputerGattServer am Leben, unabhaengig vom
@@ -24,6 +37,10 @@ import androidx.core.content.ContextCompat;
  * Activity.onStop() (z.B. beim Sperren des Bildschirms -- genau der
  * Anwendungsfall dieser App auf dem Fahrrad) Advertising und GATT-Server
  * sofort abwuergen.
+ *
+ * Zusaetzlich spielt der Service eine importierte GPX-Route ab
+ * (RouteNavigator, gespeist von GpsLink) -- solange sie aktiv ist, ersetzt
+ * sie die OsmAnd-Daten im Nav-Service und sendet das Hoehenprofil.
  *
  * MainActivity bindet sich nur noch dran, um Status-Updates fuers UI zu
  * bekommen; der Service selbst laeuft als Foreground Service mit
@@ -39,11 +56,17 @@ public class TrailBridgeService extends Service
         void onPositionUpdate(PositionState state);
         void onSubscriberCountChanged(int count);
         void onBleError(String message);
+        /** @param summary "" if no route is loaded */
+        void onRouteChanged(String summary, boolean active);
     }
 
     public static final String ACTION_STOP = "com.euphi.trailbridge.action.STOP";
     private static final String CHANNEL_ID = "trailbridge_running";
     private static final int NOTIFICATION_ID = 1;
+    private static final String TAG = "TrailBridge";
+    private static final String PREFS = "trailbridge";
+    private static final String PREF_ROUTE_ACTIVE = "route_active";
+    private static final String ROUTE_FILE = "route.gpx";
 
     private final IBinder binder = new LocalBinder();
 
@@ -59,6 +82,15 @@ public class TrailBridgeService extends Service
     // Objekt und startAdvertising() schlaegt mit
     // ADVERTISE_FAILED_ALREADY_STARTED fehl.
     private boolean started = false;
+
+    // ---- importierte GPX-Route ----
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    @Nullable private GpxRoute route;
+    private String routeSummary = "";
+    @Nullable private RouteNavigator navigator;   // nur solange die Route aktiv ist
+    // Letzter OsmAnd-Stand, damit er nach "Route beenden" sofort wieder greift.
+    @Nullable private NavState lastOsmAndNav;
 
     // Zuletzt bekannter Stand, damit eine (neu) gebundene Activity sofort den
     // aktuellen Stand zeigt statt bis zum naechsten Event zu warten.
@@ -82,6 +114,7 @@ public class TrailBridgeService extends Service
         gpsLink = new GpsLink(this, this);
         gattServer = new BikeComputerGattServer(this, this);
         createNotificationChannel();
+        restoreRoute();
     }
 
     @Override
@@ -106,6 +139,7 @@ public class TrailBridgeService extends Service
 
     @Override
     public void onDestroy() {
+        worker.shutdownNow();
         osmAndLink.stop();
         gpsLink.stop();
         gattServer.stop();
@@ -130,6 +164,132 @@ public class TrailBridgeService extends Service
             if (lastPositionState != null) listener.onPositionUpdate(lastPositionState);
             listener.onSubscriberCountChanged(lastSubscriberCount);
             if (lastBleError != null) listener.onBleError(lastBleError);
+            listener.onRouteChanged(routeSummary, navigator != null);
+        }
+    }
+
+    // ---- GPX-Route ----
+
+    /**
+     * Parst eine GPX-Datei (im Hintergrund), merkt sie sich (auch ueber einen
+     * Neustart des Dienstes) und meldet die Zusammenfassung ans UI. Startet
+     * die Navigation noch nicht -- das macht startRoute().
+     */
+    public void loadGpx(byte[] data, String displayName) {
+        worker.execute(() -> {
+            GpxRoute result;
+            try {
+                result = GpxParser.parse(new ByteArrayInputStream(data), displayName);
+            } catch (GpxParser.GpxException e) {
+                String msg = "GPX-Import fehlgeschlagen: " + e.getMessage();
+                mainHandler.post(() -> notifyRoute(msg));
+                return;
+            }
+            final GpxRoute parsed = result;
+            try {
+                saveRouteFile(data);
+            } catch (IOException e) {
+                // Die Route laeuft trotzdem, nur ein Neustart des Dienstes vergisst sie.
+                Log.w(TAG, "Route konnte nicht gespeichert werden", e);
+            }
+            String summary = summarize(parsed);
+            mainHandler.post(() -> {
+                stopRoute();
+                route = parsed;
+                publishRoute(summary);
+            });
+        });
+    }
+
+    /** Beginnt die Navigation entlang der geladenen Route (Position kommt von GpsLink). */
+    public void startRoute() {
+        if (route == null) return;
+        navigator = new RouteNavigator(route);
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_ROUTE_ACTIVE, true).apply();
+        notifyRoute(routeSummary);
+        // Sofort die erste Position durchreichen, falls schon ein Fix da ist.
+        if (lastPositionState != null && lastPositionState.hasFix) {
+            followRoute(lastPositionState);
+        }
+    }
+
+    /** Beendet die Navigation; OsmAnd (falls aktiv) uebernimmt wieder. */
+    public void stopRoute() {
+        if (navigator == null) return;
+        navigator = null;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_ROUTE_ACTIVE, false).apply();
+        gattServer.updateProfile(null);
+        NavState back = lastOsmAndNav != null ? lastOsmAndNav : NavState.NONE;
+        lastNavState = back;
+        if (uiListener != null) uiListener.onNavState(back);
+        gattServer.update(back);
+        notifyRoute(routeSummary);
+    }
+
+    private void publishRoute(String summary) {
+        routeSummary = summary;
+        notifyRoute(summary);
+    }
+
+    private void notifyRoute(String text) {
+        if (uiListener != null) uiListener.onRouteChanged(text, navigator != null);
+    }
+
+    private static String summarize(GpxRoute r) {
+        StringBuilder b = new StringBuilder(r.name.isEmpty() ? "Route" : r.name);
+        b.append(String.format(Locale.GERMANY, ": %.1f km", r.totalM / 1000));
+        if (r.hasElevation()) b.append(", ").append(r.totalAscentM()).append(" Hm aufwärts");
+        int turns = r.steps.size() - 2;   // ohne Start und Ziel
+        b.append(", ").append(turns).append(" Manöver (")
+                .append(r.hasRoutingInfo ? "aus der Datei)" : "aus der Track-Geometrie)");
+        if (!r.hasElevation()) b.append(", keine Höhendaten");
+        return b.toString();
+    }
+
+    private void saveRouteFile(byte[] data) throws IOException {
+        File f = new File(getFilesDir(), ROUTE_FILE);
+        try (FileOutputStream out = new FileOutputStream(f)) {
+            out.write(data);
+        }
+    }
+
+    /** Nach einem Neustart des Dienstes (START_STICKY) die letzte Route wieder laden. */
+    private void restoreRoute() {
+        File f = new File(getFilesDir(), ROUTE_FILE);
+        if (!f.isFile()) return;
+        boolean wasActive = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_ROUTE_ACTIVE, false);
+        worker.execute(() -> {
+            try (FileInputStream in = new FileInputStream(f)) {
+                GpxRoute parsed = GpxParser.parse(in, "Route");
+                String summary = summarize(parsed);
+                mainHandler.post(() -> {
+                    route = parsed;
+                    routeSummary = summary;
+                    if (wasActive) {
+                        startRoute();
+                    } else {
+                        publishRoute(summary);
+                    }
+                });
+            } catch (GpxParser.GpxException | IOException e) {
+                Log.w(TAG, "Gespeicherte Route nicht lesbar", e);
+            }
+        });
+    }
+
+    private void followRoute(PositionState state) {
+        RouteNavigator nav = navigator;
+        if (nav == null) return;
+        double speed = state.hasSpeed ? state.speedCms / 100.0 : -1;
+        RouteNavigator.Result r = nav.onFix(state.latitudeE7 / 1e7, state.longitudeE7 / 1e7,
+                speed, gattServer.maxPayload());
+        lastNavState = r.nav;
+        if (uiListener != null) uiListener.onNavState(r.nav);
+        gattServer.update(r.nav);
+        if (r.profile != null) {
+            gattServer.updateProfile(r.profile);
+        } else if (r.clearProfile) {
+            gattServer.updateProfile(null);
         }
     }
 
@@ -147,6 +307,11 @@ public class TrailBridgeService extends Service
 
     @Override
     public void onNavState(NavState state) {
+        lastOsmAndNav = state;
+        if (navigator != null) {
+            // Eine aktive GPX-Route hat Vorrang vor OsmAnd.
+            return;
+        }
         lastNavState = state;
         if (uiListener != null) uiListener.onNavState(state);
         gattServer.update(state);
@@ -165,6 +330,7 @@ public class TrailBridgeService extends Service
         lastPositionState = state;
         if (uiListener != null) uiListener.onPositionUpdate(state);
         gattServer.updatePosition(state);
+        if (state.hasFix) followRoute(state);
     }
 
     // ---- BikeComputerGattServer.Listener ----

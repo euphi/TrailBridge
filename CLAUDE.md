@@ -34,6 +34,12 @@ nicht auf eigene Faust ändern).
   fest gepinnt (Android-Peripherals rotieren die Adresse), kein manueller
   Wechsel der Nav-Anzeige.
 
+- **Meilenstein 4 (Branch `feature/gpx-route`, nur Debug-Build, nicht
+  released):** GPX-Import + eigene Navigation (`GpxParser`, `TurnDetector`,
+  `RouteNavigator`) und Höhenprofil als dritter BLE-Service
+  (`ElevationProfile`, `ProfileFrameEncoder`, PROTOCOL.md "Höhenprofil-
+  Service"). Firmware-Seite dafür fehlt noch. JVM-Tests unter `app/src/test`.
+
 ## Verifizierte Fakten, die beim Weiterbauen wichtig sind
 
 - Alle `net.osmand.aidlapi.*`-Dateien unter `app/src/main/{aidl,java}/` sind

@@ -32,11 +32,12 @@ import java.util.UUID;
  * BLE *central* exactly like it was for Komoot -- this class just gives it a
  * new kind of server to talk to.
  *
- * Hosts two independent GATT services on one BluetoothGattServer: navigation
- * (from OsmAnd) and GPS position (straight from the phone's GPS chip, see
- * GpsLink). Android only allows one Indicate/Notify "in flight" per connected
+ * Hosts three independent GATT services on one BluetoothGattServer: navigation
+ * (from OsmAnd or an imported GPX route), GPS position (straight from the
+ * phone's GPS chip, see GpsLink) and the elevation profile of an imported
+ * route (event-driven, no heartbeat). Android only allows one Indicate/Notify "in flight" per connected
  * device at a time -- across *all* characteristics, since onNotificationSent()
- * doesn't say which one just completed -- so both channels share a single
+ * doesn't say which one just completed -- so all channels share a single
  * in-flight gate (see `indicateInFlight` / `pendingByChannel`) instead of each
  * tracking their own, which would race.
  *
@@ -52,6 +53,8 @@ public class BikeComputerGattServer {
     public static final UUID CHAR_UUID = UUID.fromString("7473da02-2de8-4f48-9e46-21b36380c176");
     public static final UUID POSITION_SERVICE_UUID = UUID.fromString("66b5835c-9be6-43d1-b24a-f9337c0fcb7f");
     public static final UUID POSITION_CHAR_UUID = UUID.fromString("10c49e7b-4808-4d63-9b68-9ba6c385db0d");
+    public static final UUID PROFILE_SERVICE_UUID = UUID.fromString("3c1f6a90-5b2e-4d7a-9c48-e0a1b7d25f63");
+    public static final UUID PROFILE_CHAR_UUID = UUID.fromString("a84e0d17-6f3b-4c52-8e9d-1b70c2f4a596");
     private static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     private static final long HEARTBEAT_INTERVAL_MS = 5000L;
@@ -79,6 +82,7 @@ public class BikeComputerGattServer {
         final Set<BluetoothDevice> subscribers = new HashSet<>();
         volatile byte[] lastFrame;
 
+        /** Event-driven channels (profile) don't repeat their last frame. */
         final Runnable heartbeat = new Runnable() {
             @Override
             public void run() {
@@ -119,12 +123,17 @@ public class BikeComputerGattServer {
 
     private Channel navChannel;
     private Channel positionChannel;
+    private Channel profileChannel;
     private final Map<UUID, Channel> channelsByCharUuid = new HashMap<>();
 
     // Shared in-flight gate across both channels -- see class javadoc.
     private boolean indicateInFlight = false;
     private Channel inFlightChannel = null;
     private final Map<Channel, byte[]> pendingByChannel = new LinkedHashMap<>();
+
+    // Negotiated ATT_MTU per connected device; the smallest one bounds how
+    // long a frame we may send (see maxPayload()).
+    private final Map<BluetoothDevice, Integer> mtuByDevice = new HashMap<>();
 
     private boolean running = false;
 
@@ -162,8 +171,10 @@ public class BikeComputerGattServer {
 
             navChannel = new Channel(CHAR_UUID, NavFrameEncoder.hello());
             positionChannel = new Channel(POSITION_CHAR_UUID, PositionFrameEncoder.hello());
+            profileChannel = new Channel(PROFILE_CHAR_UUID, ProfileFrameEncoder.hello());
             channelsByCharUuid.put(CHAR_UUID, navChannel);
             channelsByCharUuid.put(POSITION_CHAR_UUID, positionChannel);
+            channelsByCharUuid.put(PROFILE_CHAR_UUID, profileChannel);
 
             running = true;
             // Services must be added one at a time -- some BLE stacks silently
@@ -192,6 +203,17 @@ public class BikeComputerGattServer {
     }
 
     private void onPositionServiceAdded() {
+        BluetoothGattService profileService = new BluetoothGattService(
+                PROFILE_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
+        profileService.addCharacteristic(profileChannel.characteristic);
+        try {
+            gattServer.addService(profileService);
+        } catch (SecurityException e) {
+            fail("addService (Profil) fehlgeschlagen: " + e.getMessage());
+        }
+    }
+
+    private void onProfileServiceAdded() {
         // Not advertised (31-byte legacy limit, see PROTOCOL.md) -- the
         // BikeComputer finds it via GATT service discovery after connecting
         // through the nav service's advertisement below.
@@ -227,6 +249,7 @@ public class BikeComputerGattServer {
         if (navChannel != null) mainHandler.removeCallbacks(navChannel.heartbeat);
         if (positionChannel != null) mainHandler.removeCallbacks(positionChannel.heartbeat);
         mainHandler.removeCallbacks(indicateTimeout);
+        mtuByDevice.clear();
         synchronized (this) {
             indicateInFlight = false;
             inFlightChannel = null;
@@ -248,6 +271,11 @@ public class BikeComputerGattServer {
         if (positionChannel != null) {
             synchronized (positionChannel.subscribers) {
                 positionChannel.subscribers.clear();
+            }
+        }
+        if (profileChannel != null) {
+            synchronized (profileChannel.subscribers) {
+                profileChannel.subscribers.clear();
             }
         }
         channelsByCharUuid.clear();
@@ -278,6 +306,33 @@ public class BikeComputerGattServer {
     public void updatePosition(PositionState state) {
         if (!running) return;
         send(positionChannel, PositionFrameEncoder.encode(state));
+    }
+
+    /**
+     * Sends (or, with null, clears) the elevation profile. Event-driven: the
+     * frame is kept for Read and for devices that subscribe later, but not
+     * repeated by a heartbeat.
+     */
+    public void updateProfile(ProfileFrame frame) {
+        if (!running) return;
+        send(profileChannel, frame == null ? ProfileFrameEncoder.none() : ProfileFrameEncoder.encode(frame));
+    }
+
+    /**
+     * Largest frame every connected device accepts in one indicate: the
+     * smallest negotiated ATT_MTU minus the 3 byte ATT header. Without a
+     * known MTU we assume the 256 the BikeComputer firmware requests
+     * (setMTU(256)); a device that fell back to the default 23 shows up
+     * here as soon as onMtuChanged reports it.
+     */
+    public int maxPayload() {
+        int mtu = 256;
+        synchronized (mtuByDevice) {
+            for (int m : mtuByDevice.values()) {
+                mtu = Math.min(mtu, m);
+            }
+        }
+        return mtu - 3;
     }
 
     private void send(Channel channel, byte[] frame) {
@@ -377,6 +432,10 @@ public class BikeComputerGattServer {
             if (newState != BluetoothProfile.STATE_CONNECTED) {
                 if (navChannel != null) navChannel.removeSubscriber(device);
                 if (positionChannel != null) positionChannel.removeSubscriber(device);
+                if (profileChannel != null) profileChannel.removeSubscriber(device);
+                synchronized (mtuByDevice) {
+                    mtuByDevice.remove(device);
+                }
             }
         }
 
@@ -390,6 +449,8 @@ public class BikeComputerGattServer {
                 onNavServiceAdded();
             } else if (POSITION_SERVICE_UUID.equals(service.getUuid())) {
                 onPositionServiceAdded();
+            } else if (PROFILE_SERVICE_UUID.equals(service.getUuid())) {
+                onProfileServiceAdded();
             }
         }
 
@@ -451,6 +512,9 @@ public class BikeComputerGattServer {
         @Override
         public void onMtuChanged(BluetoothDevice device, int mtu) {
             Log.i(TAG, "MTU mit " + device.getAddress() + " ausgehandelt: " + mtu);
+            synchronized (mtuByDevice) {
+                mtuByDevice.put(device, mtu);
+            }
         }
     };
 

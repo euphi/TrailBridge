@@ -134,6 +134,52 @@ public final class Maneuver {
         }
     }
 
+    /**
+     * Best-effort mapping of free text (GPX rtept name/desc/type/sym, English or
+     * German) onto our codes. Returns NONE if nothing recognisable is in there --
+     * callers must not treat that as "straight". Only used for GPX import, the
+     * OsmAnd path uses {@link #fromOsmAndXml(String)}.
+     */
+    public static int fromText(String text) {
+        if (text == null) {
+            return NONE;
+        }
+        String s = text.toLowerCase(java.util.Locale.ROOT);
+        boolean left = s.contains("left") || s.contains("links");
+        boolean right = s.contains("right") || s.contains("rechts");
+        if (s.contains("u-turn") || s.contains("uturn") || s.contains("u turn")
+                || s.contains("wenden") || s.contains("umkehren")) {
+            return right && !left ? UTURN_RIGHT : UTURN_LEFT;
+        }
+        if (s.contains("roundabout") || s.contains("rotary") || s.contains("kreisverkehr")
+                || s.contains("kreisel")) {
+            return ROUNDABOUT;
+        }
+        if (s.contains("arrive") || s.contains("destination") || s.contains("finish")
+                || s.contains("ziel")) {
+            return ARRIVE;
+        }
+        if (s.contains("depart")) {
+            return DEPART;
+        }
+        if (left == right) {
+            // neither, or both ("left or right") -- only "straight" is left to try
+            return s.contains("straight") || s.contains("continue") || s.contains("geradeaus")
+                    ? STRAIGHT : NONE;
+        }
+        if (s.contains("keep") || s.contains("fork") || s.contains("halten")) {
+            return left ? KEEP_LEFT : KEEP_RIGHT;
+        }
+        if (s.contains("sharp") || s.contains("scharf")) {
+            return left ? TURN_SHARP_LEFT : TURN_SHARP_RIGHT;
+        }
+        if (s.contains("slight") || s.contains("bear") || s.contains("leicht")
+                || s.contains("halb")) {
+            return left ? TURN_SLIGHT_LEFT : TURN_SLIGHT_RIGHT;
+        }
+        return left ? TURN_LEFT : TURN_RIGHT;
+    }
+
     public static String name(int maneuver) {
         switch (maneuver) {
             case NONE: return "NONE";

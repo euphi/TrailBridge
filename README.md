@@ -13,6 +13,12 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   TLV-Protokoll per BLE an den BikeComputer -- siehe [PROTOCOL.md](PROTOCOL.md).
 - Zweiter, unabhängiger BLE-Service mit der rohen Handy-GPS-Position, direkt
   vom GPS-Chip -- funktioniert auch ohne laufendes OsmAnd.
+- **GPX-Routen:** GPX-Datei öffnen/teilen/laden, "Route starten" -- TrailBridge
+  navigiert dann selbst (GPS-Position auf die Route gematcht, kein OsmAnd
+  nötig) und sendet dieselben Nav-Frames. Abbiegehinweise kommen aus der
+  Datei (`rtept`, OsmAnd-Routensegmente), sonst aus der Track-Geometrie.
+  Hat die Route Höhendaten, geht bei einer Steigung voraus ein Höhenprofil
+  über einen eigenen BLE-Service raus (siehe PROTOCOL.md).
 - **Status:** Läuft Ende-zu-Ende. Die Firmware
   ([TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer)) spricht
   das Protokoll inklusive GPS-Position bereits. Erste Beta-APK: siehe
@@ -29,6 +35,11 @@ Die OsmAnd-Anbindung nutzt OsmAnds offizielle
 [AIDL-API](https://github.com/osmandapp/OsmAnd/tree/master/OsmAnd-api) --
 die Schnittstellendateien dafür liegen 1:1 übernommen unter `app/src/main/aidl/`
 und `app/src/main/java/net/osmand/aidlapi/`.
+
+## Unit-Tests
+
+`gradle testDebugUnitTest` -- GPX-Parser, Abbiegeerkennung, Höhenprofil,
+Route-Matching und Frame-Encoder sind reines Java ohne Android-Abhängigkeit.
 
 ## Bauen
 

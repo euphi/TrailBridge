@@ -303,6 +303,89 @@ Genauigkeit, vor 320 ms:
 
 40 Bytes gesamt (mit UTC_TIME_MS 50) -- passt locker in die ausgehandelte ATT-MTU.
 
+## Höhenprofil-Service
+
+Dritter, unabhängiger BLE-Service, nur aktiv, solange TrailBridge eine
+importierte GPX-Route abspielt (siehe README) und die Route Höhendaten hat.
+Er ist **ereignisgetrieben**: TrailBridge sendet ein Profil, sobald eine
+Steigung voraus erkannt wird (mittlere Steigung über die nächsten 200 m
+≥ 4 %, Ende bei < 2 %), sendet bei langen Anstiegen das nächste Stück nach,
+wenn der Fahrer die Mitte des bisherigen erreicht hat, und schickt
+`PROFILE_NONE`, wenn die Steigung vorbei ist, die Route endet oder der
+Fahrer die Route verlässt. **Kein Heartbeat** -- der zuletzt gesendete
+Frame bleibt per Read abrufbar und geht an neu abonnierende Geräte.
+
+### UUIDs
+
+- Service:        `3c1f6a90-5b2e-4d7a-9c48-e0a1b7d25f63`
+- Characteristic: `a84e0d17-6f3b-4c52-8e9d-1b70c2f4a596`
+  Properties: `INDICATE`, `READ`
+
+Wie der Position-Service nicht im Advertising, Discovery nach dem
+Verbindungsaufbau. Teilt sich das In-Flight-Gate mit den anderen Services
+(siehe oben).
+
+### Frame-Format
+
+```
+Byte 0:   Protokoll-Version (aktuell 1)
+Byte 1:   Message-Type
+Byte 2..: TLV-Einträge (nur bei PROFILE_UPDATE)
+```
+
+| Wert | Name | Bedeutung |
+|---|---|---|
+| 0x00 | HELLO | Zustand nach Verbindungsaufbau, kein Profil |
+| 0x01 | PROFILE_UPDATE | Profil, gefolgt von TLV-Einträgen; ersetzt ein früheres |
+| 0x02 | PROFILE_NONE | kein (Steigungs-)Profil mehr anzeigen |
+
+| Tag | Name | Länge | Format |
+|---|---|---|---|
+| 0x01 | START_REMAINING_DISTANCE_M | 4 | uint32 LE, Restdistanz der Route bis zum Ziel **am ersten Profilpunkt** |
+| 0x02 | STEP_M | 1 | Abstand der Profilpunkte in Metern (aktuell 25) |
+| 0x03 | BASE_ALT_DM | 2 | int16 LE, Höhe des ersten Punkts in Dezimetern |
+| 0x04 | DELTAS_DM | N | N × int8: Höhenänderung in dm von Punkt k zu Punkt k+1 |
+
+Punkt k liegt bei `START_REMAINING_DISTANCE_M - k × STEP_M` Restdistanz,
+seine Höhe ist `BASE_ALT_DM + Σ DELTAS_DM[0..k-1]` (in dm). Es gibt N+1
+Punkte. Die Höhen sind über ca. 125 m geglättet (GPX-Höhen sind verrauscht).
+
+**Position im Profil ohne Wegstreckenzähler:** Die Firmware kennt
+`REMAINING_DISTANCE_M` aus dem Nav-Frame (0x08); die Position des Fahrers im
+Profil ist `START_REMAINING_DISTANCE_M - REMAINING_DISTANCE_M` Meter ab dem
+ersten Punkt. Das gilt entlang der Route, nicht der Luftlinie, und übersteht
+Reconnects. Liegt der Wert außerhalb `0..N × STEP_M`, ist das Profil
+veraltet bzw. noch nicht erreicht.
+
+**Länge und MTU:** N richtet sich nach der ausgehandelten MTU (Payload
+`ATT_MTU - 3`): `N = min(200, Payload - 17)`; unter 8 Punkten (200 m) sendet
+TrailBridge kein Profil. Die App nimmt das Minimum über alle verbundenen
+Geräte und geht ohne Angabe von den 256 aus, die die Firmware anfordert.
+
+Unbekannte Tags überspringt die Firmware wie überall (Länge respektieren).
+
+### Beispiel
+
+Profil ab 4200 m Restdistanz, Start auf 34,5 m, drei Schritte (+1,2 m,
++1,3 m, −0,2 m):
+
+```
+01 01                                              version=1, type=PROFILE_UPDATE
+01 04 68 10 00 00                                  START_REMAINING_DISTANCE_M = 4200
+02 01 19                                           STEP_M = 25
+03 02 59 01                                        BASE_ALT_DM = 345
+04 03 0C 0D FE                                     DELTAS_DM = +12, +13, -2
+```
+
+## Navigation aus einer GPX-Route
+
+Wenn TrailBridge eine GPX-Route selbst abspielt, sendet es ganz normale
+`NAV_UPDATE`-Frames im Nav-Service (Format oben, unverändert), berechnet
+aus der GPS-Position. Besonderheiten gegenüber OsmAnd: keine Fahrspuren
+(0x0A-0x0D), Straßennamen nur, wenn die GPX sie enthält. Abseits der Route
+(> 50 m) steht `MANEUVER = UNKNOWN (255)`, `MANEUVER_DISTANCE_M` ist dann die
+Entfernung zur Route und `STREET_NAME` "Abseits der Route".
+
 ## Warum Indicate statt Notify
 
 Bei Indicate bestätigt der Empfänger (ESP32) jedes Paket auf ATT-Ebene, bei
