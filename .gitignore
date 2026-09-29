@@ -16,3 +16,6 @@
 /app/build
 /app/release
 .vscode/
+
+# Lokale Testdaten (GPX von BRouter), nicht einchecken
+/testdata/
