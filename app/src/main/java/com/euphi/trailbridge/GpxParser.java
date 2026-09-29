@@ -235,6 +235,9 @@ public final class GpxParser {
                     Pt p = rte.get(i);
                     int[] m = maneuverOf(p);
                     if (m[0] == Maneuver.NONE) continue;
+                    // "Geradeaus" ohne Namen ist auf dem Display nur Rauschen (BRouter
+                    // schreibt es an jeder Kreuzung, an der man geradeaus bleibt).
+                    if (m[0] == Maneuver.STRAIGHT && (p.name == null || p.name.isEmpty())) continue;
                     double at;
                     if (geometry == rte) {
                         at = geo.cum[i];
