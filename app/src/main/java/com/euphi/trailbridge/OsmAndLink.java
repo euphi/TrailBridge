@@ -18,6 +18,10 @@ import net.osmand.aidlapi.IOsmAndAidlInterface;
 import net.osmand.aidlapi.gpx.AGpxBitmap;
 import net.osmand.aidlapi.info.AppInfoParams;
 import net.osmand.aidlapi.logcat.OnLogcatMessageParams;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import net.osmand.aidlapi.navigation.ADirectionInfo;
 import net.osmand.aidlapi.navigation.ANavigationUpdateParams;
 import net.osmand.aidlapi.navigation.OnVoiceNavigationParams;
@@ -249,6 +253,7 @@ public class OsmAndLink {
         int nextDistance = turnInfo.getInt("next_turn_distance", 0);
         String rawNextLanes = turnInfo.getString("next_turn_lanes");
         Log.i(TAG, "raw next_turn_lanes=" + rawNextLanes);
+        appendDebugLog("next_turn_lanes=" + rawNextLanes);
         List<Lane> lanes = parseLanes(rawNextLanes);
 
         // Note the missing underscore: OsmAnd really does write "after_next"
@@ -258,6 +263,7 @@ public class OsmAndLink {
         int afterDistance = turnInfo.getInt("after_nextturn_distance", 0);
         String rawAfterLanes = turnInfo.getString("after_nextturn_lanes");
         Log.i(TAG, "raw after_nextturn_lanes=" + rawAfterLanes);
+        appendDebugLog("after_nextturn_lanes=" + rawAfterLanes);
         List<Lane> afterLanes = parseLanes(rawAfterLanes);
 
         int maneuver = Maneuver.fromOsmAndXml(nextType);
@@ -311,6 +317,24 @@ public class OsmAndLink {
             }
         }
         return lanes;
+    }
+
+    /**
+     * Logcat is unreliable on some devices (verified: nothing from this
+     * app's process ever reaches `adb logcat` on the Telekom Lynx test
+     * phone, despite the foreground service and USB debugging both being
+     * active) -- so mirror the raw lane strings into a plain file instead.
+     * Read with `adb shell run-as com.euphi.trailbridge cat
+     * files/lane_debug.log` (debug builds only, run-as needs a debuggable
+     * app).
+     */
+    private void appendDebugLog(String line) {
+        File f = new File(appContext.getFilesDir(), "lane_debug.log");
+        try (FileWriter w = new FileWriter(f, true)) {
+            w.write(System.currentTimeMillis() + " " + line + "\n");
+        } catch (IOException e) {
+            Log.w(TAG, "debug log write failed", e);
+        }
     }
 
     private void setStatus(String status) {

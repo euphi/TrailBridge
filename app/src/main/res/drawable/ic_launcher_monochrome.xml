@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Themed icon (Android 13+): dieselbe Form einfarbig, das System faerbt sie ein. -->
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeAlpha="0.4"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M31.37,76.63 A32,32 0 1 1 76.63,76.63" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M31.37,76.63 A32,32 0 0 1 68.53,25.49" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M35,63 L40,63 A14,14 0 0 1 68,63 L73,63" />
+</vector>

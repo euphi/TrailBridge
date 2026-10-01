@@ -27,6 +27,9 @@ public final class GpxRoute {
         }
     }
 
+    public static final long NO_TIME = -1;
+    public static final short NO_VALUE = -1;
+
     public final String name;
     public final double[] lat;
     public final double[] lon;
@@ -34,6 +37,14 @@ public final class GpxRoute {
     public final float[] ele;
     /** Cumulative distance from the first point, metres. */
     public final double[] cum;
+    /** Recording time per point, ms since the epoch; {@link #NO_TIME} where the file has none. */
+    public final long[] timeMs;
+    /** Heart rate per point in bpm; {@link #NO_VALUE} where the file has none (TrackPointExtension hr). */
+    public final short[] hr;
+    /** Cadence per point in rpm (0 = coasting is a real value); {@link #NO_VALUE} where the file has none. */
+    public final short[] cad;
+    /** Power per point in watts (0 = coasting is a real value); {@link #NO_VALUE} where the file has none. */
+    public final short[] power;
     public final double totalM;
     /** Sorted by distM; always starts with DEPART and ends with ARRIVE. */
     public final List<Step> steps;
@@ -47,7 +58,24 @@ public final class GpxRoute {
      */
     public GpxRoute(String name, double[] lat, double[] lon, float[] ele,
                     List<Step> fileSteps, boolean hasRoutingInfo) {
+        this(name, lat, lon, ele, null, null, null, fileSteps, hasRoutingInfo);
+    }
+
+    public GpxRoute(String name, double[] lat, double[] lon, float[] ele,
+                    long[] timeMs, short[] hr, short[] cad,
+                    List<Step> fileSteps, boolean hasRoutingInfo) {
+        this(name, lat, lon, ele, timeMs, hr, cad, null, fileSteps, hasRoutingInfo);
+    }
+
+    /** @param timeMs, hr, cad, power per-point recorded values; null = the file has none of that kind. */
+    public GpxRoute(String name, double[] lat, double[] lon, float[] ele,
+                    long[] timeMs, short[] hr, short[] cad, short[] power,
+                    List<Step> fileSteps, boolean hasRoutingInfo) {
         this.name = name == null ? "" : name;
+        this.power = power != null ? power : filled(new short[lat.length], NO_VALUE);
+        this.timeMs = timeMs != null ? timeMs : filled(new long[lat.length], NO_TIME);
+        this.hr = hr != null ? hr : filled(new short[lat.length], NO_VALUE);
+        this.cad = cad != null ? cad : filled(new short[lat.length], NO_VALUE);
         this.lat = lat;
         this.lon = lon;
         this.ele = ele;
@@ -58,6 +86,16 @@ public final class GpxRoute {
         this.totalM = lat.length == 0 ? 0 : cum[lat.length - 1];
         this.hasRoutingInfo = hasRoutingInfo;
         this.steps = Collections.unmodifiableList(withEnds(fileSteps, totalM));
+    }
+
+    private static long[] filled(long[] a, long v) {
+        java.util.Arrays.fill(a, v);
+        return a;
+    }
+
+    private static short[] filled(short[] a, short v) {
+        java.util.Arrays.fill(a, v);
+        return a;
     }
 
     private static List<Step> withEnds(List<Step> in, double totalM) {
@@ -88,6 +126,46 @@ public final class GpxRoute {
         for (float e : ele) {
             if (!Float.isNaN(e)) with++;
         }
+        return lat.length >= 2 && with >= 2 && with >= lat.length * 0.8;
+    }
+
+    /** True if (almost) every point has a recording time, so the file says how fast it was ridden. */
+    public boolean hasTimes() {
+        int with = 0;
+        for (long t : timeMs) {
+            if (t != NO_TIME) with++;
+        }
+        return mostly(with);
+    }
+
+    /** True if enough points carry a heart rate to take it from the file. */
+    public boolean hasHeartRate() {
+        int with = 0;
+        for (short v : hr) {
+            if (v != NO_VALUE) with++;
+        }
+        return mostly(with);
+    }
+
+    /** True if enough points carry a cadence to take it from the file. */
+    public boolean hasCadence() {
+        int with = 0;
+        for (short v : cad) {
+            if (v != NO_VALUE) with++;
+        }
+        return mostly(with);
+    }
+
+    /** True if enough points carry a power value to take it from the file. */
+    public boolean hasPower() {
+        int with = 0;
+        for (short v : power) {
+            if (v != NO_VALUE) with++;
+        }
+        return mostly(with);
+    }
+
+    private boolean mostly(int with) {
         return lat.length >= 2 && with >= 2 && with >= lat.length * 0.8;
     }
 

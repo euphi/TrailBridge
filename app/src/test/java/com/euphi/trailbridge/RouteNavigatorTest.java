@@ -113,4 +113,30 @@ public class RouteNavigatorTest {
         RouteNavigator n = new RouteNavigator(Routes.polyline(new double[][]{{0, 0}, {0, 2000}}, null));
         assertNull(fixAt(n, 0, 100).profile);
     }
+
+    @Test
+    public void seekToJumpsFarAheadAndRestartsTheProfile() {
+        RouteNavigator n = new RouteNavigator(lRoute());
+        assertNotNull(fixAt(n, 0, 350).profile);        // climb ahead: profile sent
+        n.seekTo(700);                                   // east leg, 200 m after the turn
+        RouteNavigator.Result r = fixAt(n, 200, 500);
+        assertFalse(r.offRoute);
+        assertEquals(Maneuver.ARRIVE, r.nav.maneuver);
+        assertEquals(300, r.nav.remainingDistanceM, 5);
+        assertEquals(700, n.progressM(), 5);
+        // seeking back into the climb: a fresh profile is sent again
+        n.seekTo(300);
+        assertNotNull(fixAt(n, 0, 350).profile);
+    }
+
+    @Test
+    public void seekToWorksOnARouteThatDoublesBack() {
+        // out 1000 m north and straight back on the same line: a matching window around the
+        // wrong half would find the "near" return leg; seekTo must pin the half we mean
+        GpxRoute r = Routes.polyline(new double[][]{{0, 0}, {0, 1000}, {0, 0}}, null);
+        RouteNavigator n = new RouteNavigator(r);
+        n.seekTo(1500);                                  // on the way back, at north = 500
+        fixAt(n, 0, 500);
+        assertEquals(1500, n.progressM(), 10);
+    }
 }

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Rim & Ridge fuers Handy, siehe DESIGN.md. Es gibt bewusst nur dieses eine
+         dunkle Theme (der BikeComputer hat auch keine Tag-Variante). -->
+    <style name="Theme.TrailBridge" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_window</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="colorPrimary">@color/rr_panel_bg</item>
+        <item name="colorPrimaryDark">@color/rr_background</item>
+        <item name="colorAccent">@color/rr_brass</item>
+        <item name="colorControlNormal">@color/rr_muted</item>
+        <item name="colorControlActivated">@color/rr_brass</item>
+        <item name="colorControlHighlight">@color/rr_brass_faint</item>
+
+        <item name="android:textColorPrimary">@color/rr_parchment</item>
+        <item name="android:textColorSecondary">@color/rr_muted</item>
+        <item name="android:textColorHint">@color/rr_muted</item>
+        <item name="android:fontFamily">@font/ibm_plex_sans_medium</item>
+    </style>
+
+    <!-- Leere Wurzel, damit die Ableitung ueber den Namen ("TB.Eyebrow" erbt von "TB") greift. -->
+    <style name="TB" />
+
+    <!-- ============ Text: drei Schriften, nach Rolle getrennt (Design-System §2) ============ -->
+
+    <!-- Feld-Beschriftung / Kartenkopf: IBM Plex Mono, Messing, gesperrt, Versalien. -->
+    <style name="TB.Eyebrow">
+        <item name="android:fontFamily">@font/ibm_plex_mono_medium</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.16</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/rr_brass</item>
+    </style>
+
+    <!-- Fliesstext: IBM Plex Sans. -->
+    <style name="TB.Body">
+        <item name="android:fontFamily">@font/ibm_plex_sans_medium</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/rr_parchment</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+
+    <!-- Einheit / technische Zeile: IBM Plex Mono, gedaempft. -->
+    <style name="TB.Caption">
+        <item name="android:fontFamily">@font/ibm_plex_mono_regular</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/rr_muted</item>
+    </style>
+
+    <!-- Hero- und Sekundaerzahlen: Big Shoulders Display Bold. Groesse am Einsatzort. -->
+    <style name="TB.Number">
+        <item name="android:fontFamily">@font/big_shoulders_display_bold</item>
+        <item name="android:textColor">@color/rr_parchment</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="TB.Number.Hero">
+        <item name="android:textColor">@color/rr_parchment_bright</item>
+    </style>
+
+    <style name="TB.Console">
+        <item name="android:fontFamily">@font/ibm_plex_mono_regular</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/rr_parchment</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+        <item name="android:textIsSelectable">true</item>
+    </style>
+
+    <!-- Stat-Gruppe (Design-System §4): Linien-Icon + Wert + Einheit. -->
+    <style name="TB.StatRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="TB.StatIcon">
+        <item name="android:layout_width">26dp</item>
+        <item name="android:layout_height">26dp</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="TB.StatValue" parent="TB.Number">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">30sp</item>
+    </style>
+
+    <style name="TB.StatUnit" parent="TB.Caption">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginLeft">5dp</item>
+    </style>
+
+    <!-- ============ Karten ============ -->
+
+    <style name="TB.Card">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">14dp</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:background">@drawable/bg_card</item>
+    </style>
+
+    <!-- ============ Tasten: Pillen (Design-System §4) ============ -->
+
+    <style name="TB.Button" parent="Widget.AppCompat.Button">
+        <item name="android:fontFamily">@font/ibm_plex_sans_semibold</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/btn_text_ghost</item>
+        <item name="android:background">@drawable/btn_ghost</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <!-- Hauptaktion: Messing gefuellt, dunkle Schrift (wie der gewaehlte Modus-Chip). -->
+    <style name="TB.Button.Primary">
+        <item name="android:textColor">@color/btn_text_primary</item>
+        <item name="android:background">@drawable/btn_primary</item>
+    </style>
+
+    <!-- Kleine Pille fuer Nebenaktionen (z. B. "Erneut versuchen"). -->
+    <style name="TB.Button.Small">
+        <item name="android:minHeight">34dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:paddingRight">14dp</item>
+    </style>
+
+    <!-- Wahl-Pille der Moduswahl; die Activity setzt selected. -->
+    <style name="TB.Button.Choice">
+        <item name="android:textColor">@color/btn_text_choice</item>
+        <item name="android:background">@drawable/btn_choice</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:minHeight">46dp</item>
+        <item name="android:paddingLeft">6dp</item>
+        <item name="android:paddingRight">6dp</item>
+    </style>
+
+    <style name="TB.Check" parent="Widget.AppCompat.CompoundButton.CheckBox">
+        <item name="android:fontFamily">@font/ibm_plex_sans_medium</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/rr_parchment</item>
+    </style>
+
+</resources>

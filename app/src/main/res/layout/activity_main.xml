@@ -1,75 +1,465 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Rim & Ridge, siehe DESIGN.md: Anthrazit, Messing, drei Schriften. Der Aufbau
+     folgt dem Web-Dashboard des BikeComputers (Karten mit Messing-Rahmen, Kopfzeile in
+     Plex Mono) und uebernimmt vom Geraete-Display den Ring mit Luecke fuer Speed/Distanz. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="28dp">
 
-    <TextView
-        android:id="@+id/statusView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/status_initial"
-        android:textSize="16sp"
-        android:paddingBottom="16dp" />
-
-    <Button
-        android:id="@+id/retryButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/retry_button" />
-
+    <!-- ============ Kopfzeile ============ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingTop="16dp">
+        android:paddingLeft="4dp"
+        android:paddingTop="4dp">
 
-        <Button
-            android:id="@+id/loadGpxButton"
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_bridge" />
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/gpx_load_button" />
+            android:layout_marginLeft="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/TB.Number.Hero"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textSize="34sp" />
+
+            <TextView
+                style="@style/TB.Eyebrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="@string/header_sub"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <Button
-            android:id="@+id/routeToggleButton"
+            android:id="@+id/naviButton"
+            style="@style/TB.Button.Primary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/route_start" />
+            android:minHeight="38dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="@string/navi_button"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- ============ Moduswahl: bestimmt, welche Karten unten sichtbar sind ============ -->
+    <LinearLayout style="@style/TB.Card">
+
+        <TextView
+            style="@style/TB.Eyebrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_mode" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/modeOsmand"
+                style="@style/TB.Button.Choice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="@string/mode_osmand" />
+
+            <Button
+                android:id="@+id/modeGpxNav"
+                style="@style/TB.Button.Choice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="@string/mode_gpx_nav" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/modeSimulation"
+                style="@style/TB.Button.Choice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="@string/mode_simulation" />
+
+            <Button
+                android:id="@+id/modeAll"
+                style="@style/TB.Button.Choice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="@string/mode_all" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/modeHint"
+            style="@style/TB.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- ============ Verbindung ============ -->
+    <LinearLayout style="@style/TB.Card">
+
+        <TextView
+            style="@style/TB.Eyebrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_connection" />
+
+        <!-- OsmAnd: nur in den Modi, in denen es eine Rolle spielt (siehe UiMode.showsOsmand) -->
+        <LinearLayout
+            android:id="@+id/osmandRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="84dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="22dp"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/osmandDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/status_dot"
+                    android:backgroundTint="@color/rr_muted" />
+
+                <TextView
+                    style="@style/TB.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:text="@string/label_osmand" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/statusView"
+                    style="@style/TB.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/status_initial" />
+
+                <!-- nur solange keine Verbindung zu OsmAnd steht -->
+                <Button
+                    android:id="@+id/retryButton"
+                    style="@style/TB.Button.Small"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/retry_button" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="84dp"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="22dp"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/bleDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/status_dot"
+                    android:backgroundTint="@color/rr_muted" />
+
+                <TextView
+                    style="@style/TB.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    android:text="@string/label_ble" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/bleStatusView"
+                style="@style/TB.Body"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/ble_status_initial" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ============ Route ============ -->
+    <LinearLayout
+        android:id="@+id/routeCard"
+        style="@style/TB.Card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/TB.Eyebrow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/card_route" />
+
+            <Button
+                android:id="@+id/testToggleButton"
+                style="@style/TB.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="34dp"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:text="@string/test_button"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/routeInfoView"
+            style="@style/TB.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/route_none" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/loadGpxButton"
+                style="@style/TB.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="@string/gpx_load_button" />
+
+            <Button
+                android:id="@+id/routeToggleButton"
+                style="@style/TB.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="@string/route_start" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ============ Testfahrt: die geladene GPX-Route "abfahren" (Fake-Position + Sensorwerte) ============ -->
+    <LinearLayout
+        android:id="@+id/testPanel"
+        style="@style/TB.Card"
+        android:visibility="gone">
+
+        <TextView
+            style="@style/TB.Eyebrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_test" />
+
+        <TextView
+            android:id="@+id/sensorInfoView"
+            style="@style/TB.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:lineSpacingExtra="3dp"
+            android:textSize="11sp" />
+
+        <CheckBox
+            android:id="@+id/emulateHrCheck"
+            style="@style/TB.Check"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/emulate_hr" />
+
+        <CheckBox
+            android:id="@+id/emulateCadCheck"
+            style="@style/TB.Check"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emulate_cad" />
+
+        <CheckBox
+            android:id="@+id/emulatePowerCheck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/emulate_power" />
+
+        <com.euphi.trailbridge.RouteProfileView
+            android:id="@+id/profileView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_inset" />
+
+        <TextView
+            android:id="@+id/playbackInfoView"
+            style="@style/TB.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="@color/rr_parchment" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/playButton"
+                style="@style/TB.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dp"
+                android:layout_weight="2"
+                android:text="@string/play" />
+
+            <Button
+                android:id="@+id/stopPlaybackButton"
+                style="@style/TB.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="@string/stop" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/prevManeuverButton"
+                style="@style/TB.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="@string/prev_maneuver" />
+
+            <Button
+                android:id="@+id/nextManeuverButton"
+                style="@style/TB.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="@string/next_maneuver" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ============ Position / Navigation (auch im Navi-Modus, siehe NaviActivity) ============ -->
+    <include layout="@layout/card_position" />
+
+    <include layout="@layout/card_navigation" />
+
+    <!-- ============ Rohdaten (das, was frueher die Hauptanzeige war) ============ -->
+    <LinearLayout
+        android:id="@+id/rawCard"
+        style="@style/TB.Card">
+
+        <TextView
+            style="@style/TB.Eyebrow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/card_raw" />
+
+        <TextView
+            android:id="@+id/navStateView"
+            style="@style/TB.Console"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_console"
+            android:padding="12dp"
+            android:text="@string/navstate_initial" />
+
+        <TextView
+            android:id="@+id/positionStateView"
+            style="@style/TB.Console"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_console"
+            android:padding="12dp"
+            android:text="@string/position_initial" />
     </LinearLayout>
 
     <TextView
-        android:id="@+id/routeInfoView"
+        android:id="@+id/footerView"
+        style="@style/TB.Caption"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="8dp"
-        android:textSize="14sp"
-        android:text="@string/route_none" />
-
-    <TextView
-        android:id="@+id/bleStatusView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="16dp"
-        android:textSize="16sp"
-        android:text="@string/ble_status_initial" />
-
-    <TextView
-        android:id="@+id/navStateView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="24dp"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        android:text="@string/navstate_initial" />
-
-    <TextView
-        android:id="@+id/positionStateView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="16dp"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        android:text="@string/position_initial" />
+        android:layout_marginTop="22dp"
+        android:gravity="center"
+        android:letterSpacing="0.1"
+        android:textSize="10sp" />
 
 </LinearLayout>
+
+</ScrollView>

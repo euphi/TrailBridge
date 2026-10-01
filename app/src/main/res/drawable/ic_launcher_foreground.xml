@@ -3,14 +3,23 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Bruecke: Weg fuehrt links auf die Bruecke, im Bogen drueber, rechts
-         wieder runter, steht fuer die Bruecke zwischen OsmAnd und dem
-         BikeComputer (die "Trail"-Seite kommt vom Hintergrundton). -->
+    <!-- Rim & Ridge: Ring mit Luecke unten wie der Geschwindigkeits-Ring des
+         BikeComputers (Spur + ~60 % Fuellung), darin die Bruecke zwischen
+         OsmAnd und dem BikeComputer. Vorlage: logo.svg. -->
     <path
-        android:strokeColor="@color/ic_launcher_foreground"
-        android:strokeWidth="10"
+        android:strokeColor="#332F28"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M31.37,76.63 A32,32 0 1 1 76.63,76.63" />
+    <path
+        android:strokeColor="#CBA36B"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M31.37,76.63 A32,32 0 0 1 68.53,25.49" />
+    <path
+        android:strokeColor="#F3ECDF"
+        android:strokeWidth="7"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:fillColor="#00000000"
-        android:pathData="M22,80 L30,80 A24,24 0 0 1 78,80 L86,80" />
+        android:pathData="M35,63 L40,63 A14,14 0 0 1 68,63 L73,63" />
 </vector>

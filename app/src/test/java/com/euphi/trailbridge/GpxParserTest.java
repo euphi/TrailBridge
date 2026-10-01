@@ -112,4 +112,65 @@ public class GpxParserTest {
         assertEquals(Maneuver.NONE, Maneuver.fromText("Wegpunkt 3"));
         assertEquals(Maneuver.NONE, Maneuver.fromText(null));
     }
+
+    private static String timedTrk(String extra) {
+        return "<gpx xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\"><trk><name>Fahrt</name><trkseg>"
+                + "<trkpt lat=\"52.5\" lon=\"13.4\"><ele>40</ele><time>2026-09-30T08:00:00Z</time>" + extra.replace("%HR%", "120").replace("%CAD%", "80") + "</trkpt>"
+                + "<trkpt lat=\"52.501\" lon=\"13.4\"><ele>41</ele><time>2026-09-30T08:00:20.500Z</time>" + extra.replace("%HR%", "125").replace("%CAD%", "0") + "</trkpt>"
+                + "<trkpt lat=\"52.502\" lon=\"13.4\"><ele>43</ele><time>2026-09-30T10:00:40+02:00</time>" + extra.replace("%HR%", "130").replace("%CAD%", "85") + "</trkpt>"
+                + "</trkseg></trk></gpx>";
+    }
+
+    @Test
+    public void timeHeartRateAndCadenceFromTrackPointExtension() throws Exception {
+        String ext = "<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>%HR%</gpxtpx:hr>"
+                + "<gpxtpx:cad>%CAD%</gpxtpx:cad></gpxtpx:TrackPointExtension></extensions>";
+        GpxRoute r = GpxParser.parse(Routes.stream(timedTrk(ext)), "x");
+        assertTrue(r.hasTimes());
+        assertTrue(r.hasHeartRate());
+        assertTrue(r.hasCadence());
+        assertEquals(20500, r.timeMs[1] - r.timeMs[0]);
+        assertEquals(19500, r.timeMs[2] - r.timeMs[1]);          // +02:00 offset honoured
+        assertEquals(120, r.hr[0]);
+        assertEquals(130, r.hr[2]);
+        assertEquals(0, r.cad[1]);                               // coasting is a value, not "missing"
+        assertEquals(85, r.cad[2]);
+    }
+
+    @Test
+    public void powerFromExtensionVariants() throws Exception {
+        for (String ext : new String[]{
+                "<extensions><power>%P%</power></extensions>",
+                "<extensions><gpxpx:PowerExtension><gpxpx:PowerInWatts>%P%</gpxpx:PowerInWatts></gpxpx:PowerExtension></extensions>"}) {
+            String gpx = "<gpx><trk><trkseg>"
+                    + "<trkpt lat=\"52.5\" lon=\"13.4\">" + ext.replace("%P%", "210") + "</trkpt>"
+                    + "<trkpt lat=\"52.501\" lon=\"13.4\">" + ext.replace("%P%", "0") + "</trkpt>"
+                    + "<trkpt lat=\"52.502\" lon=\"13.4\">" + ext.replace("%P%", "180") + "</trkpt>"
+                    + "</trkseg></trk></gpx>";
+            GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+            assertTrue(ext, r.hasPower());
+            assertEquals(210, r.power[0]);
+            assertEquals(0, r.power[1]);                           // coasting is a value
+        }
+    }
+
+    @Test
+    public void plainTrackHasNoRecordedSensors() throws Exception {
+        GpxRoute r = GpxParser.parse(Routes.stream(Routes.trkGpx(L)), "x");
+        assertFalse(r.hasTimes());
+        assertFalse(r.hasHeartRate());
+        assertFalse(r.hasCadence());
+        assertFalse(r.hasPower());
+    }
+
+    @Test
+    public void implausibleSensorValuesCountAsMissing() throws Exception {
+        // 0 bpm / 255 are what straps write while they have no contact
+        String ext = "<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>0</gpxtpx:hr>"
+                + "<gpxtpx:cad>255</gpxtpx:cad></gpxtpx:TrackPointExtension></extensions>";
+        GpxRoute r = GpxParser.parse(Routes.stream(timedTrk(ext)), "x");
+        assertFalse(r.hasHeartRate());
+        assertFalse(r.hasCadence());
+        assertTrue(r.hasTimes());
+    }
 }

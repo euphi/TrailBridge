@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Navi-Modus: nur Navigation, Position und - solange eines unterwegs ist - das an den
+     BikeComputer gesendete Hoehenprofil. Dieselben Karten wie der Hauptscreen (card_*), oben
+     fest, damit Navigation und Position beim Ein-/Ausblenden des Profils nicht springen. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="24dp">
+
+    <!-- ============ Kopfzeile: Titel, BLE-Punkt, Beenden ============ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="4dp">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_bridge" />
+
+        <TextView
+            style="@style/TB.Number.Hero"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_weight="1"
+            android:text="@string/navi_title"
+            android:textSize="30sp" />
+
+        <View
+            android:id="@+id/bleDot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/status_dot"
+            android:backgroundTint="@color/rr_muted" />
+
+        <TextView
+            style="@style/TB.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:layout_marginRight="14dp"
+            android:text="@string/label_ble" />
+
+        <Button
+            android:id="@+id/closeButton"
+            style="@style/TB.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="38dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="@string/navi_close"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <include layout="@layout/card_navigation" />
+
+    <include layout="@layout/card_position" />
+
+    <!-- ============ Hoehenprofil: nur solange eines gesendet ist ============ -->
+    <LinearLayout
+        android:id="@+id/profileCard"
+        style="@style/TB.Card"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/TB.Eyebrow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/card_profile" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_gradient" />
+
+            <TextView
+                android:id="@+id/gradeView"
+                style="@style/TB.Number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="6dp"
+                android:layout_marginRight="14dp"
+                android:text="@string/dash"
+                android:textSize="24sp" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_height" />
+
+            <TextView
+                android:id="@+id/riseView"
+                style="@style/TB.Number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="6dp"
+                android:text="@string/dash"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <com.euphi.trailbridge.ClimbProfileView
+            android:id="@+id/climbView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_inset" />
+    </LinearLayout>
+
+</LinearLayout>
+
+</ScrollView>

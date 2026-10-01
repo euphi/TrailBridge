@@ -36,7 +36,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
-        android:theme="@style/Theme.AppCompat.DayNight">
+        android:theme="@style/Theme.TrailBridge">
 
         <activity
             android:name=".MainActivity"
@@ -74,6 +74,12 @@
                 <data android:mimeType="application/gpx+xml" />
             </intent-filter>
         </activity>
+
+        <!-- Navi-Modus, geoeffnet aus der MainActivity (kein Launcher-Eintrag). -->
+        <activity
+            android:name=".NaviActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
 
         <service
             android:name=".TrailBridgeService"

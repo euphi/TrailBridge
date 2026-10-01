@@ -263,6 +263,11 @@ TLV-Eintrag: `Tag (1 Byte) | Länge N (1 Byte) | Wert (N Byte)`
 | 0x06 | ACCURACY_M_X10 | 2 | uint16 LE, Meter × 10 (horizontale Genauigkeit) | nur wenn der Fix eine Genauigkeit liefert |
 | 0x07 | FIX_AGE_MS | 4 | uint32 LE, Millisekunden seit diesem Fix | immer |
 | 0x08 | UTC_TIME_MS | 8 | uint64 LE, UTC-Zeit des Fixes in ms seit 1970-01-01 (`Location.getTime()`) | wenn der Fix eine Zeit hat (> 0) |
+| 0x09 | HEART_RATE_BPM | 1 | uint8, Schläge/min | nur wenn TrailBridge einen Puls kennt, siehe "Sensorwerte und Simulationsmodus" |
+| 0x0A | CADENCE_RPM | 1 | uint8, Umdrehungen/min, 0 = rollen | wie 0x09, für die Trittfrequenz |
+| 0x0B | SIM_FLAGS | 1 | uint8-Bitfeld, siehe unten | nur wenn etwas an diesem Frame simuliert ist (sonst fehlt der Tag) |
+| 0x0C | BARO_HEIGHT_DM | 4 | int32 LE, Höhe in Dezimetern über NHN | nur wenn TrailBridge eine Barometer-Höhe kennt, siehe unten |
+| 0x0D | POWER_W | 2 | uint16 LE, Watt (0 = rollen) | nur wenn TrailBridge eine Leistung kennt, siehe unten |
 
 E7-Fixpunkt für Lat/Lon (statt Gleitkomma) aus demselben Grund wie überall
 sonst im TLV-Format: festes, plattformunabhängiges Byte-Layout, kein
@@ -385,6 +390,76 @@ aus der GPS-Position. Besonderheiten gegenüber OsmAnd: keine Fahrspuren
 (0x0A-0x0D), Straßennamen nur, wenn die GPX sie enthält. Abseits der Route
 (> 50 m) steht `MANEUVER = UNKNOWN (255)`, `MANEUVER_DISTANCE_M` ist dann die
 Entfernung zur Route und `STREET_NAME` "Abseits der Route".
+
+## Sensorwerte und Simulationsmodus
+
+Der Positions-Frame kann neben der Position auch **Sensorwerte** tragen, die
+TrailBridge kennt: Puls (0x09), Trittfrequenz (0x0A), Barometer-Höhe (0x0C) und
+Leistung (0x0D); die Geschwindigkeit steckt in `SPEED_CMS` (0x04). Ob die Werte
+echt oder erfunden sind, sagt ein eigener Tag, damit beides nebeneinander
+möglich ist:
+
+**BARO_HEIGHT_DM** ist die Höhe, die der BikeComputer sonst von seinem Barometer
+hat, in Dezimetern (`ALTITUDE_M` hat nur ganze Meter -- zu grob, um daraus über
+ein paar Dutzend Meter Strecke eine Steigung zu rechnen). **Die Steigung wird
+nicht übertragen:** der BikeComputer rechnet sie wie immer selbst aus Höhe und
+zurückgelegter Strecke. **POWER_W** ist die Tretleistung eines Leistungsmessers.
+
+**SIM_FLAGS (0x0B)**, uint8-Bitfeld. **Fehlt der Tag (oder ist er 0), ist alles
+im Frame echt.**
+
+| Bit | Name | Bedeutung, wenn gesetzt |
+|---|---|---|
+| 0 (0x01) | SIM_POSITION | Lat/Lon/Höhe/Kurs sind erfunden, nicht vom GPS-Chip (z.B. GPX-Testfahrt) |
+| 1 (0x02) | SIM_SENSORS | `SPEED_CMS` ist die Geschwindigkeit eines **simulierten Speed-Sensors**; Puls, Trittfrequenz, Barometer-Höhe und Leistung sind simuliert -- und das **Fehlen** von 0x09/0x0A/0x0C/0x0D heißt "diesen Sensor gibt es nicht" |
+| 2-7 | -- | reserviert, `0`, von der Firmware zu ignorieren |
+
+Konsequenzen für die Firmware:
+
+- **Sim-Daten dürfen nie als echte Messung behandelt werden.** Fahrdaten, die
+  mit gesetztem SIM_POSITION oder SIM_SENSORS entstehen, gehören im Log als
+  simuliert markiert (`LOG_SIMULATED`).
+- **SIM_SENSORS:** nur ein Simulator-Build (`BC_SIM`) speist Geschwindigkeit,
+  Puls, Trittfrequenz, Höhe und Leistung in seinen Sensor-Simulator ein
+  (`SimSensors`, wie `sim <km/h> <rpm> <bpm>`; die Höhe ersetzt das
+  Barometer, daraus entsteht die Steigung); die normale Firmware ignoriert die
+  Werte, damit keine Fake-Kilometer in Odometer und Statistik landen. Ende der Simulation =
+  der nächste Frame ohne SIM_SENSORS, `POSITION_NONE`, ein veralteter Fix
+  (`FIX_AGE_MS` > 5 s) oder das Ende der Verbindung -> "Sensoren aus".
+- **Ohne SIM_SENSORS** sind 0x09/0x0A/0x0C/0x0D echte, von TrailBridge weitergereichte
+  Sensorwerte (z.B. ein Pulsgurt am Handy). **Noch nicht gebaut** -- die App
+  sendet so etwas bisher nicht, die Firmware wertet es nicht aus. Der Tag und
+  die Semantik stehen hier schon fest, damit sich das ohne Vertragsbruch
+  nachrüsten lässt.
+- Die Zeit (`UTC_TIME_MS`) bleibt auch in der Simulation die echte Uhrzeit des
+  Handys -- die Uhr des BikeComputers soll richtig bleiben.
+
+### GPX-Testfahrt
+
+TrailBridge kann die geladene GPX-Route "abfahren" statt der echten
+GPS-Position zu senden: einmal pro Sekunde ein Fix entlang der Route, mit
+`SIM_FLAGS = 0x03` (SIM_POSITION | SIM_SENSORS). `SPEED_CMS`, `HEART_RATE_BPM`,
+`CADENCE_RPM`, `POWER_W` kommen aus der GPX (Zeitstempel, TrackPointExtension
+`hr`/`cad`, Leistung), wo sie fehlen, aus der Berechnung bzw. -- auf Wunsch --
+zufällig variierenden, zur Strecke passenden Werten (Puls folgt der Belastung,
+Trittfrequenz sinkt am Berg, 0 beim Rollen/Stehen; Leistung ergibt sich aus
+Geschwindigkeit, Steigung und Beschleunigung, 0 beim Rollen); ohne Emulation
+fehlt der Tag, der Sensor "ist nicht da". `BARO_HEIGHT_DM` ist die geglättete
+Höhe der Route (fehlt, wenn die GPX keine Höhendaten hat). Pausiert die Testfahrt, kommen weiter Frames: Geschwindigkeit 0,
+Trittfrequenz 0. Nav- und Höhenprofil-Service laufen wie bei einer echten Fahrt
+aus der simulierten Position. Das Ende der Testfahrt ist der erste Frame ohne
+SIM_FLAGS bzw. `POSITION_NONE`.
+
+Beispiel, Testfahrt bei 21,6 km/h, Puls 132, Trittfrequenz 85 (Auszug, nur die
+hinteren Tags des Frames):
+
+```
+09 01 84                                           HEART_RATE_BPM = 132
+0A 01 55                                           CADENCE_RPM = 85
+0B 01 03                                           SIM_FLAGS = SIM_POSITION | SIM_SENSORS
+0C 04 80 0D 00 00                                  BARO_HEIGHT_DM = 3456 (345,6 m)
+0D 02 FA 00                                        POWER_W = 250
+```
 
 ## Warum Indicate statt Notify
 

@@ -14,6 +14,9 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
 Testen), [`BUILD.md`](BUILD.md) (Setup/Build) und [`PROTOCOL.md`](PROTOCOL.md)
 (das BLE-Wire-Format -- verbindlicher Vertrag zwischen App und Firmware,
 nicht auf eigene Faust ändern).
+Für alles an der Oberfläche zusätzlich [`DESIGN.md`](DESIGN.md): die App
+folgt dem Rim-&-Ridge-Designsystem des BikeComputers (Farb-Tokens `rr_*`,
+Stile `TB.*`, drei Schriften) -- keine Hex-Werte oder Fremdschriften im Layout.
 
 ## Stand
 
@@ -39,6 +42,18 @@ nicht auf eigene Faust ändern).
   `RouteNavigator`) und Höhenprofil als dritter BLE-Service
   (`ElevationProfile`, `ProfileFrameEncoder`, PROTOCOL.md "Höhenprofil-
   Service"). Firmware-Seite dafür fehlt noch. JVM-Tests unter `app/src/test`.
+  **Testfahrt** (`RoutePlayer`, `RouteProfileView`, Panel in `MainActivity`):
+  spielt die GPX als Fake-GPS-Position samt simulierter Sensorwerte ab
+  (Speed aus GPX-Zeit oder berechnet; Puls/Trittfrequenz aus der GPX oder
+  emuliert; dazu Höhe als Barometer-Ersatz -- der BC rechnet die Steigung selbst --
+  und Leistung). Dafür fünf neue optionale Tags im Positions-Service (0x09-0x0D:
+  Puls, Trittfrequenz, `SIM_FLAGS`, Höhe in dm, Leistung; PROTOCOL.md "Sensorwerte und
+  Simulationsmodus") -- die Simulation ist immer gekennzeichnet, ohne Flag ist
+  alles echt (so bleibt Platz für später von TrailBridge weitergereichte
+  echte Sensoren, noch nicht gebaut). Firmware-Seite: Parser +
+  `SimSensors::feedFromTrailBridge()` im TRGB-BikeComputer-Repo (Branch
+  `feature/ride-state-machine`, uncommittet), nur der BC_SIM-Build speist ein.
+  Auf echtem Gerät noch nicht getestet.
 
 ## Verifizierte Fakten, die beim Weiterbauen wichtig sind
 

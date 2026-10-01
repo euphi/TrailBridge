@@ -16,6 +16,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -42,6 +43,11 @@ import java.util.concurrent.Executors;
  * (RouteNavigator, gespeist von GpsLink) -- solange sie aktiv ist, ersetzt
  * sie die OsmAnd-Daten im Nav-Service und sendet das Hoehenprofil.
  *
+ * Fuer Testzwecke kann die Route auch "abgefahren" werden (RoutePlayer): der
+ * Service erzeugt dann einmal pro Sekunde eine Fake-Position samt simulierten
+ * Sensorwerten (Geschwindigkeit, Puls, Trittfrequenz) und schickt sie statt
+ * des echten GPS-Fixes an den BikeComputer und in den RouteNavigator.
+ *
  * MainActivity bindet sich nur noch dran, um Status-Updates fuers UI zu
  * bekommen; der Service selbst laeuft als Foreground Service mit
  * Dauerbenachrichtigung weiter, auch wenn keine Activity gebunden ist.
@@ -58,6 +64,15 @@ public class TrailBridgeService extends Service
         void onBleError(String message);
         /** @param summary "" if no route is loaded */
         void onRouteChanged(String summary, boolean active);
+        /** @param state null if no route is loaded */
+        void onPlaybackChanged(@Nullable PlaybackState state);
+        /**
+         * The elevation profile that is currently on its way to the BikeComputer
+         * (see PROTOCOL.md "Höhenprofil-Service").
+         * @param frame null if there is none (no climb ahead, route ended, ...)
+         */
+        default void onProfileChanged(@Nullable ProfileFrame frame) {
+        }
     }
 
     public static final String ACTION_STOP = "com.euphi.trailbridge.action.STOP";
@@ -66,6 +81,10 @@ public class TrailBridgeService extends Service
     private static final String TAG = "TrailBridge";
     private static final String PREFS = "trailbridge";
     private static final String PREF_ROUTE_ACTIVE = "route_active";
+    private static final String PREF_EMULATE_HR = "emulate_hr";
+    private static final String PREF_EMULATE_CAD = "emulate_cad";
+    private static final String PREF_EMULATE_POWER = "emulate_power";
+    private static final long PLAYBACK_TICK_MS = 1000L;
     private static final String ROUTE_FILE = "route.gpx";
 
     private final IBinder binder = new LocalBinder();
@@ -92,6 +111,21 @@ public class TrailBridgeService extends Service
     // Letzter OsmAnd-Stand, damit er nach "Route beenden" sofort wieder greift.
     @Nullable private NavState lastOsmAndNav;
 
+    // ---- Testfahrt (GPX abspielen) ----
+    @Nullable private RoutePlayer player;          // zur geladenen Route, auch ohne laufende Testfahrt
+    private boolean playbackActive = false;        // Fake-Position wird gesendet (spielt oder pausiert)
+    private boolean playbackPlaying = false;
+    private boolean playbackStartedRoute = false;  // die Testfahrt hat die Navigation gestartet
+    private long playbackLastTickMs;
+    private boolean emulateHr = true;
+    private boolean emulateCad = true;
+    private boolean emulatePower = true;
+    // Der echte GPS-Fix laeuft waehrend der Testfahrt weiter, wird aber nicht weitergereicht.
+    @Nullable private PositionState lastRealPosition;
+    @Nullable private PlaybackState lastPlayback;
+    @Nullable private ProfileFrame lastProfile;
+    private final Runnable playbackTick = this::onPlaybackTick;
+
     // Zuletzt bekannter Stand, damit eine (neu) gebundene Activity sofort den
     // aktuellen Stand zeigt statt bis zum naechsten Event zu warten.
     private String lastStatus = "";
@@ -114,6 +148,10 @@ public class TrailBridgeService extends Service
         gpsLink = new GpsLink(this, this);
         gattServer = new BikeComputerGattServer(this, this);
         createNotificationChannel();
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        emulateHr = prefs.getBoolean(PREF_EMULATE_HR, true);
+        emulateCad = prefs.getBoolean(PREF_EMULATE_CAD, true);
+        emulatePower = prefs.getBoolean(PREF_EMULATE_POWER, true);
         restoreRoute();
     }
 
@@ -139,6 +177,7 @@ public class TrailBridgeService extends Service
 
     @Override
     public void onDestroy() {
+        mainHandler.removeCallbacks(playbackTick);
         worker.shutdownNow();
         osmAndLink.stop();
         gpsLink.stop();
@@ -165,7 +204,25 @@ public class TrailBridgeService extends Service
             listener.onSubscriberCountChanged(lastSubscriberCount);
             if (lastBleError != null) listener.onBleError(lastBleError);
             listener.onRouteChanged(routeSummary, navigator != null);
+            listener.onPlaybackChanged(lastPlayback);
+            listener.onProfileChanged(lastProfile);
         }
+    }
+
+    /**
+     * Detaches a listener -- but only if it is still the current one: when one
+     * activity hands over to another, the old one's onStop may arrive after the new
+     * one has already registered.
+     */
+    public void removeUiListener(UiListener listener) {
+        if (uiListener == listener) uiListener = null;
+    }
+
+    /** Sends the profile to the BikeComputer (null: none any more) and mirrors it to the UI. */
+    private void publishProfile(@Nullable ProfileFrame frame) {
+        lastProfile = frame;
+        gattServer.updateProfile(frame);
+        if (uiListener != null) uiListener.onProfileChanged(frame);
     }
 
     // ---- GPX-Route ----
@@ -193,9 +250,11 @@ public class TrailBridgeService extends Service
                 Log.w(TAG, "Route konnte nicht gespeichert werden", e);
             }
             String summary = summarize(parsed);
+            RoutePlayer parsedPlayer = new RoutePlayer(parsed);
             mainHandler.post(() -> {
+                playbackStop();
                 stopRoute();
-                route = parsed;
+                setRoute(parsed, parsedPlayer);
                 publishRoute(summary);
             });
         });
@@ -203,11 +262,20 @@ public class TrailBridgeService extends Service
 
     /** Beginnt die Navigation entlang der geladenen Route (Position kommt von GpsLink). */
     public void startRoute() {
+        startNavigation(true);
+    }
+
+    /** @param persist merken, dass die Route aktiv ist (ueberlebt einen Neustart des Dienstes) */
+    private void startNavigation(boolean persist) {
         if (route == null) return;
         navigator = new RouteNavigator(route);
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_ROUTE_ACTIVE, true).apply();
+        if (playbackActive && player != null) {
+            navigator.seekTo(player.distanceM());
+        }
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_ROUTE_ACTIVE, persist).apply();
         notifyRoute(routeSummary);
-        // Sofort die erste Position durchreichen, falls schon ein Fix da ist.
+        // Sofort die erste Position durchreichen, falls schon ein Fix da ist
+        // (waehrend einer Testfahrt ist lastPositionState die simulierte).
         if (lastPositionState != null && lastPositionState.hasFix) {
             followRoute(lastPositionState);
         }
@@ -218,7 +286,7 @@ public class TrailBridgeService extends Service
         if (navigator == null) return;
         navigator = null;
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_ROUTE_ACTIVE, false).apply();
-        gattServer.updateProfile(null);
+        publishProfile(null);
         NavState back = lastOsmAndNav != null ? lastOsmAndNav : NavState.NONE;
         lastNavState = back;
         if (uiListener != null) uiListener.onNavState(back);
@@ -229,6 +297,154 @@ public class TrailBridgeService extends Service
     private void publishRoute(String summary) {
         routeSummary = summary;
         notifyRoute(summary);
+    }
+
+    private void setRoute(GpxRoute r, RoutePlayer p) {
+        route = r;
+        player = p;
+        p.setEmulation(emulateHr, emulateCad, emulatePower);
+        publishPlayback(null);
+    }
+
+    // ---- Testfahrt: GPX abspielen ----
+
+    /** Start / Pause; nach dem Ende der Route startet es von vorn. */
+    public void playbackToggle() {
+        RoutePlayer p = player;
+        if (p == null) return;
+        if (!playbackActive) {
+            playbackActive = true;
+            playbackPlaying = true;
+            playbackLastTickMs = SystemClock.elapsedRealtime();
+            if (p.finished()) p.seek(0);
+            // Laeuft die Navigation schon (mit dem Stand des echten GPS), an die
+            // Startstelle der Testfahrt setzen.
+            if (navigator != null) navigator.seekTo(p.distanceM());
+            // Erst die simulierte Position setzen, dann ggf. die Navigation starten: sie
+            // bekommt sofort diese Position statt der des echten GPS.
+            emitPlaybackSample(p.step(0, true));
+            if (navigator == null) {
+                playbackStartedRoute = true;
+                startNavigation(false);
+            }
+            mainHandler.postDelayed(playbackTick, PLAYBACK_TICK_MS);
+        } else if (p.finished()) {
+            playbackPlaying = true;
+            playbackSeek(0);
+        } else {
+            playbackPlaying = !playbackPlaying;
+            playbackLastTickMs = SystemClock.elapsedRealtime();
+            emitPlaybackSample(p.step(0, playbackPlaying));
+        }
+    }
+
+    /** Beendet die Testfahrt; der echte GPS-Fix gilt wieder, die Navigation endet, falls die Testfahrt sie gestartet hat. */
+    public void playbackStop() {
+        if (!playbackActive) return;
+        playbackActive = false;
+        playbackPlaying = false;
+        mainHandler.removeCallbacks(playbackTick);
+        if (playbackStartedRoute) {
+            playbackStartedRoute = false;
+            stopRoute();
+        }
+        PositionState real = lastRealPosition != null ? lastRealPosition : PositionState.NONE;
+        lastPositionState = real;
+        if (uiListener != null) uiListener.onPositionUpdate(real);
+        gattServer.updatePosition(real);
+        publishPlayback(null);
+    }
+
+    /** Springt an eine Stelle der Route (Meter ab Start); auch ohne laufende Testfahrt (= Startpunkt). */
+    public void playbackSeek(double distM) {
+        RoutePlayer p = player;
+        if (p == null) return;
+        p.seek(distM);
+        if (!playbackActive) {
+            publishPlayback(null);
+            return;
+        }
+        if (navigator != null) navigator.seekTo(p.distanceM());
+        // Das alte Profil gehoert zur Stelle vor dem Sprung.
+        publishProfile(null);
+        playbackLastTickMs = SystemClock.elapsedRealtime();
+        emitPlaybackSample(p.step(0, playbackPlaying));
+    }
+
+    /** Puls / Trittfrequenz / Leistung emulieren, wo die GPX keine hat (bei vorhandenen ohne Wirkung). */
+    public void setPlaybackEmulation(boolean heartRate, boolean cadence, boolean power) {
+        emulateHr = heartRate;
+        emulateCad = cadence;
+        emulatePower = power;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .putBoolean(PREF_EMULATE_HR, heartRate)
+                .putBoolean(PREF_EMULATE_CAD, cadence)
+                .putBoolean(PREF_EMULATE_POWER, power).apply();
+        RoutePlayer p = player;
+        if (p == null) return;
+        p.setEmulation(heartRate, cadence, power);
+        if (playbackActive) {
+            emitPlaybackSample(p.step(0, playbackPlaying));
+        } else {
+            publishPlayback(null);
+        }
+    }
+
+    private void onPlaybackTick() {
+        RoutePlayer p = player;
+        if (!playbackActive || p == null) return;
+        long now = SystemClock.elapsedRealtime();
+        // Gedeckelt: nach einem Aussetzer (Doze) soll die Fahrt nicht springen.
+        double dt = Math.min(5.0, (now - playbackLastTickMs) / 1000.0);
+        playbackLastTickMs = now;
+        RoutePlayer.Sample s = p.step(dt, playbackPlaying);
+        if (playbackPlaying && p.finished()) {
+            playbackPlaying = false;   // angekommen: stehen bleiben, Sitzung bleibt offen
+        }
+        emitPlaybackSample(s);
+        mainHandler.postDelayed(playbackTick, PLAYBACK_TICK_MS);
+    }
+
+    /** Behandelt die simulierte Position wie einen GPS-Fix, nur mit Sensorwerten dazu. */
+    private void emitPlaybackSample(RoutePlayer.Sample s) {
+        boolean hasEle = !Double.isNaN(s.eleM);
+        PositionState state = new PositionState(
+                true,
+                (int) Math.round(s.lat * 1e7), (int) Math.round(s.lon * 1e7),
+                hasEle, hasEle ? (int) Math.round(s.eleM) : 0,
+                true, (int) Math.round(s.speedMs * 100),
+                true, (int) Math.round(s.bearingDeg * 100) % 36000,
+                true, 50,   // "5 m genau", wie ein guter GPS-Fix
+                SystemClock.elapsedRealtime(),
+                // Die Uhr des BikeComputers soll richtig bleiben: echte Zeit, nicht die der GPX.
+                System.currentTimeMillis(),
+                s.hr >= 0, Math.max(0, s.hr), s.cad >= 0, Math.max(0, s.cad),
+                // Der Hoehenverlauf der Route steht fuer das Barometer des BikeComputers
+                // (der berechnet daraus seine Steigung selbst, die wird nicht gesendet).
+                hasEle, hasEle ? (int) Math.round(s.eleM * 10) : 0,
+                s.power >= 0, Math.max(0, s.power),
+                PositionState.SIM_POSITION | PositionState.SIM_SENSORS);
+        lastPositionState = state;
+        if (uiListener != null) uiListener.onPositionUpdate(state);
+        gattServer.updatePosition(state);
+        followRoute(state);
+        publishPlayback(s);
+    }
+
+    private void publishPlayback(@Nullable RoutePlayer.Sample s) {
+        RoutePlayer p = player;
+        GpxRoute r = route;
+        if (p == null || r == null) {
+            lastPlayback = null;
+        } else {
+            lastPlayback = new PlaybackState(r, playbackActive, playbackPlaying, p.finished(),
+                    s != null ? s.distM : p.distanceM(), p.timeS(), p.durationS(),
+                    s != null ? s.speedMs : 0, s != null ? s.hr : -1, s != null ? s.cad : -1,
+                    s != null ? s.power : -1, s != null ? s.eleM : Double.NaN,
+                    p.speedSource(), p.heartRateSource(), p.cadenceSource(), p.powerSource(),
+                    p.hasHeight());
+        }
+        if (uiListener != null) uiListener.onPlaybackChanged(lastPlayback);
     }
 
     private void notifyRoute(String text) {
@@ -262,8 +478,9 @@ public class TrailBridgeService extends Service
             try (FileInputStream in = new FileInputStream(f)) {
                 GpxRoute parsed = GpxParser.parse(in, "Route");
                 String summary = summarize(parsed);
+                RoutePlayer parsedPlayer = new RoutePlayer(parsed);
                 mainHandler.post(() -> {
-                    route = parsed;
+                    setRoute(parsed, parsedPlayer);
                     routeSummary = summary;
                     if (wasActive) {
                         startRoute();
@@ -287,9 +504,9 @@ public class TrailBridgeService extends Service
         if (uiListener != null) uiListener.onNavState(r.nav);
         gattServer.update(r.nav);
         if (r.profile != null) {
-            gattServer.updateProfile(r.profile);
+            publishProfile(r.profile);
         } else if (r.clearProfile) {
-            gattServer.updateProfile(null);
+            publishProfile(null);
         }
     }
 
@@ -327,6 +544,9 @@ public class TrailBridgeService extends Service
 
     @Override
     public void onPositionUpdate(PositionState state) {
+        lastRealPosition = state;
+        // Waehrend einer Testfahrt gilt die simulierte Position, nicht der echte Fix.
+        if (playbackActive) return;
         lastPositionState = state;
         if (uiListener != null) uiListener.onPositionUpdate(state);
         gattServer.updatePosition(state);

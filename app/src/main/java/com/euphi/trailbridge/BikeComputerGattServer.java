@@ -281,19 +281,20 @@ public class BikeComputerGattServer {
         channelsByCharUuid.clear();
     }
 
+    /**
+     * Number of connected devices that subscribed to at least one service --
+     * a BikeComputer subscribing to navigation, position and profile is still
+     * one subscriber, not three.
+     */
     public int subscriberCount() {
-        int count = 0;
-        if (navChannel != null) {
-            synchronized (navChannel.subscribers) {
-                count += navChannel.subscribers.size();
+        Set<BluetoothDevice> devices = new HashSet<>();
+        for (Channel channel : new Channel[]{navChannel, positionChannel, profileChannel}) {
+            if (channel == null) continue;
+            synchronized (channel.subscribers) {
+                devices.addAll(channel.subscribers);
             }
         }
-        if (positionChannel != null) {
-            synchronized (positionChannel.subscribers) {
-                count += positionChannel.subscribers.size();
-            }
-        }
-        return count;
+        return devices.size();
     }
 
     /** Called from OsmAndLink whenever a new NavState is ready. */

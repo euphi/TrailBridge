@@ -1,6 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="120" height="120" role="img" aria-label="TrailBridge Logo">
-    <rect width="108" height="108" rx="24" fill="#0F5C66"/>
-    <path d="M22,80 L30,80 A24,24 0 0 1 78,80 L86,80"
-          fill="none" stroke="#FFFFFF" stroke-width="10"
+    <rect width="108" height="108" rx="24" fill="#161B1F"/>
+    <!-- Rim &amp; Ridge: Ring mit Lücke unten wie der Geschwindigkeits-Ring des BikeComputers ... -->
+    <circle cx="54" cy="54" r="32" fill="none" stroke="#332F28" stroke-width="5" stroke-linecap="round"
+            stroke-dasharray="150.8 50.27" transform="rotate(135 54 54)"/>
+    <circle cx="54" cy="54" r="32" fill="none" stroke="#CBA36B" stroke-width="5" stroke-linecap="round"
+            stroke-dasharray="90.48 110.58" transform="rotate(135 54 54)"/>
+    <!-- ... darin die Brücke -->
+    <path d="M35,63 L40,63 A14,14 0 0 1 68,63 L73,63" fill="none" stroke="#F3ECDF" stroke-width="7"
           stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

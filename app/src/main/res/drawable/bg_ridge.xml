@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gleiche Pfade wie bg_ridge.svg im TRGB-BikeComputer (Viewport 1200x500). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="360dp"
+    android:height="200dp"
+    android:viewportWidth="1200"
+    android:viewportHeight="500">
+    <path
+        android:pathData="M-20,410 L120,300 L230,370 L340,270 L470,390 L610,310 L760,400 L900,330 L1050,395 L1220,320"
+        android:strokeColor="#CBA36B"
+        android:strokeAlpha="0.16"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M0,430 Q150,390 300,415 T600,405 T900,420 T1200,400 L1200,500 L0,500 Z"
+        android:fillColor="#232B31"
+        android:fillAlpha="0.55" />
+    <path
+        android:pathData="M0,460 Q200,420 400,445 T800,435 T1200,450 L1200,500 L0,500 Z"
+        android:fillColor="#1B2226"
+        android:fillAlpha="0.75" />
+</vector>

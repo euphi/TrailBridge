@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wahl-Pille (Moduswahl): gewaehlt = Messing voll mit dunkler Schrift (wie die gewaehlte
+     Stufe des segmentierten Waehlers im Design-System), sonst die normale Pille. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true" android:drawable="@drawable/btn_primary" />
+    <item android:drawable="@drawable/btn_ghost" />
+</selector>

@@ -29,6 +29,10 @@ import javax.xml.parsers.SAXParserFactory;
  *  2. rtept elements: an OsmAnd/BRouter-style extension "turn", else
  *     free text from type/sym/desc/name (Maneuver.fromText).
  *  3. Nothing in the file -> TurnDetector derives them from the geometry.
+ *
+ * Recorded tracks may also carry per-point time and, in the
+ * TrackPointExtension, heart rate, cadence and power (used by the playback).
+ *
  * As soon as the file carries routing info (1 or 2 -- any rtept counts),
  * step 3 is skipped, even if no manoeuvre could be read from it.
  */
@@ -74,6 +78,10 @@ public final class GpxParser {
     private static final class Pt {
         double lat, lon;
         float ele = Float.NaN;
+        long timeMs = GpxRoute.NO_TIME;
+        short hr = GpxRoute.NO_VALUE;
+        short cad = GpxRoute.NO_VALUE;
+        short power = GpxRoute.NO_VALUE;
         String name, desc, type, sym, turn;
     }
 
@@ -164,6 +172,9 @@ public final class GpxParser {
                     case "name":
                         current.name = value;
                         break;
+                    case "time":
+                        if (parent.equals("trkpt")) current.timeMs = parseTime(value);
+                        break;
                     case "desc":
                     case "cmt":
                         if (current.desc == null || current.desc.isEmpty()) current.desc = value;
@@ -177,6 +188,26 @@ public final class GpxParser {
                     case "turn":
                     case "turntype":
                         current.turn = value;
+                        break;
+                    default:
+                        break;
+                }
+            } else if (current != null && inside("trkpt")) {
+                // Recorded tracks: hr/cad sit in the TrackPointExtension (Garmin
+                // gpxtpx:/ns3:, local names are all we look at).
+                switch (n) {
+                    case "hr":
+                    case "heartrate":
+                        current.hr = parseSensor(value, 30, 250);
+                        break;
+                    case "cad":
+                    case "cadence":
+                        current.cad = parseSensor(value, 0, 250);
+                        break;
+                    case "power":
+                    case "powerinwatts":
+                    case "watts":
+                        current.power = parseSensor(value, 0, 3000);
                         break;
                     default:
                         break;
@@ -205,11 +236,19 @@ public final class GpxParser {
             double[] lat = new double[n];
             double[] lon = new double[n];
             float[] ele = new float[n];
+            long[] time = new long[n];
+            short[] hr = new short[n];
+            short[] cad = new short[n];
+            short[] power = new short[n];
             for (int i = 0; i < n; i++) {
                 Pt p = geometry.get(i);
                 lat[i] = p.lat;
                 lon[i] = p.lon;
                 ele[i] = p.ele;
+                time[i] = p.timeMs;
+                hr[i] = p.hr;
+                cad[i] = p.cad;
+                power[i] = p.power;
             }
             String name = routeName != null && !routeName.isEmpty() ? routeName
                     : trackName != null && !trackName.isEmpty() ? trackName : fallbackName;
@@ -252,7 +291,7 @@ public final class GpxParser {
             if (!hasInfo) {
                 steps = TurnDetector.detect(geo);
             }
-            return new GpxRoute(name, lat, lon, ele, steps, hasInfo);
+            return new GpxRoute(name, lat, lon, ele, time, hr, cad, power, steps, hasInfo);
         }
 
         /** {maneuver, roundaboutExit}; maneuver NONE if the point says nothing usable. */
@@ -306,6 +345,29 @@ public final class GpxParser {
                 }
             }
             return bestAlong;
+        }
+
+        /** ISO 8601 (GPX: UTC with "Z"); an offset is honoured, no zone means UTC. */
+        private static long parseTime(String s) {
+            try {
+                return java.time.OffsetDateTime.parse(s).toInstant().toEpochMilli();
+            } catch (java.time.format.DateTimeParseException e) {
+                try {
+                    return java.time.LocalDateTime.parse(s).toInstant(java.time.ZoneOffset.UTC).toEpochMilli();
+                } catch (java.time.format.DateTimeParseException e2) {
+                    return GpxRoute.NO_TIME;
+                }
+            }
+        }
+
+        /** Integer sensor value; outside [min, max] (sensor dropout writes 0 or 255) counts as missing. */
+        private static short parseSensor(String s, int min, int max) {
+            try {
+                int v = (int) Math.round(Double.parseDouble(s));
+                return v >= min && v <= max ? (short) v : GpxRoute.NO_VALUE;
+            } catch (NumberFormatException e) {
+                return GpxRoute.NO_VALUE;
+            }
         }
 
         private static double parseDouble(String s) {

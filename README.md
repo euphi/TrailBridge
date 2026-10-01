@@ -19,6 +19,19 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   Datei (`rtept`, OsmAnd-Routensegmente), sonst aus der Track-Geometrie.
   Hat die Route Höhendaten, geht bei einer Steigung voraus ein Höhenprofil
   über einen eigenen BLE-Service raus (siehe PROTOCOL.md).
+- **Testfahrt:** Die geladene GPX-Route lässt sich zum Testen "abspielen"
+  (Button "Testfahrt"): TrailBridge schickt dem BikeComputer statt der echten
+  GPS-Position eine Fake-Position entlang der Strecke -- mit passender
+  Geschwindigkeit (aus den GPX-Zeitstempeln, sonst berechnet: langsamer
+  bergauf, schneller bergab, vorsichtig in Kurven), Puls/Trittfrequenz/Leistung
+  (aus der GPX, sonst auf Wunsch emuliert) und der Höhe der Route. Über ein Höhenprofil mit Manöver-Markern
+  lässt sich beliebig vor- und zurückspulen. Details und Wire-Format:
+  PROTOCOL.md, "Sensorwerte und Simulationsmodus".
+- **Navi-Modus:** Button "Navi-Modus" im Hauptscreen -- ein reduzierter Screen
+  für unterwegs: nur Navigation, Position und, solange eines an den BikeComputer
+  gesendet ist, das Höhenprofil der Steigung voraus (mit Fahrerposition, wie
+  die Firmware sie berechnet). Der Bildschirm bleibt dabei an; Route bzw. Testfahrt
+  vorher im Hauptscreen starten. Siehe [DESIGN.md](DESIGN.md).
 - **Status:** Läuft Ende-zu-Ende. Die Firmware
   ([TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer)) spricht
   das Protokoll inklusive GPS-Position bereits. Erste Beta-APK: siehe
@@ -45,6 +58,8 @@ Route-Matching und Frame-Encoder sind reines Java ohne Android-Abhängigkeit.
 
 Siehe [BUILD.md](BUILD.md), Veröffentlichung auf F-Droid: [FDROID.md](FDROID.md).
 
+Design (Rim & Ridge, wie der BikeComputer): [DESIGN.md](DESIGN.md).
+
 ## Testen
 
 1. OsmAnd installieren, Offline-Karte für deine Gegend laden.
@@ -58,6 +73,20 @@ Siehe [BUILD.md](BUILD.md), Veröffentlichung auf F-Droid: [FDROID.md](FDROID.md
    übernächstes Manöver, Restdistanz/-zeit.
 6. `adb logcat -s OsmAndLink -s BikeGatt` zeigt dieselben Infos als Log,
    falls die Bildschirmausgabe mal hakt.
+
+### Testfahrt (GPX abspielen)
+
+1. GPX laden, "Testfahrt" antippen -> Panel mit Höhenprofil.
+2. Es zeigt, woher Geschwindigkeit, Puls und Trittfrequenz kommen (GPX oder
+   nicht vorhanden); wo sie fehlen, lassen sie sich per Häkchen emulieren.
+3. "Abspielen" startet die Fahrt am Anfang bzw. an der zuletzt gewählten Stelle
+   (die Navigation startet dabei von selbst). Ins Höhenprofil tippen/ziehen
+   spult an die Stelle, "« Manöver" / "Manöver »" springt 400 m vor das vorige/
+   nächste Manöver. "Stopp" beendet die Testfahrt, der echte GPS-Fix gilt wieder.
+4. Läuft in Echtzeit (1x). Der BikeComputer bekommt Position und Nav-Frames
+   wie auf einer echten Fahrt; Die Sensorwerte (Geschwindigkeit, Puls,
+   Trittfrequenz, Höhe, Leistung) wertet nur der Simulator-Build der Firmware (`trgb-esp32-s3-sim`)
+   aus; sie sind im Protokoll als simuliert gekennzeichnet.
 
 Ohne BikeComputer lässt sich der BLE-Teil auch mit jeder BLE-Scanner-App
 prüfen, z.B. [nRF Connect](https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile)

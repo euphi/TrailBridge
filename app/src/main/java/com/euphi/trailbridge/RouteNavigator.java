@@ -69,6 +69,20 @@ public final class RouteNavigator {
     }
 
     /**
+     * Puts the rider at a given distance along the route without matching a
+     * position (the GPX playback's "fast forward"). A matched search window
+     * would not find a far jump -- or, on a route that doubles back, find the
+     * wrong stretch. The profile state restarts too; the caller tells the
+     * BikeComputer to drop the old profile.
+     */
+    public void seekTo(double progressM) {
+        this.progressM = Math.max(0, Math.min(progressM, route.totalM));
+        matched = true;
+        climbing = false;
+        sentProfile = null;
+    }
+
+    /**
      * @param speedMs        speed over ground, negative if unknown
      * @param maxPayload     largest indicate payload the connected BikeComputer
      *                       takes (ATT_MTU - 3), bounds the profile length

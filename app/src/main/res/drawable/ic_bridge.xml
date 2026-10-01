@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp" android:height="40dp"
+    android:viewportWidth="40" android:viewportHeight="40">
+    <!-- Bruecken-Marke des Logos (Kopfzeile). -->
+    <path
+        android:strokeColor="#F3ECDF"
+        android:strokeWidth="4.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M6,27 L9,27 A11,11 0 0 1 31,27 L34,27" />
+</vector>

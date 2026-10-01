@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TrailBridge</string>
+    <string name="header_sub">OsmAnd · BikeComputer</string>
     <string name="status_initial">Starte …</string>
     <string name="navstate_initial">(noch keine Navigationsdaten)</string>
     <string name="retry_button">Erneut versuchen</string>
@@ -9,5 +10,67 @@
     <string name="gpx_load_button">GPX laden</string>
     <string name="route_start">Route starten</string>
     <string name="route_stop">Route beenden</string>
+    <string name="test_button">Testfahrt</string>
+    <string name="emulate_hr">Puls emulieren</string>
+    <string name="emulate_cad">Trittfrequenz emulieren</string>
+    <string name="emulate_power">Leistung emulieren</string>
+    <string name="prev_maneuver">« Manöver</string>
+    <string name="next_maneuver">Manöver »</string>
+    <string name="play">Abspielen</string>
+    <string name="pause">Pause</string>
+    <string name="replay">Nochmal</string>
+    <string name="stop">Stopp</string>
     <string name="route_none">(keine GPX-Route geladen)</string>
+
+    <!-- Kartenköpfe (werden per textAllCaps in Versalien gesetzt) -->
+    <string name="card_connection">Verbindung</string>
+    <string name="card_route">Route</string>
+    <string name="card_test">Testfahrt</string>
+    <string name="card_position">Position</string>
+    <string name="card_navigation">Navigation</string>
+    <string name="card_raw">Rohdaten</string>
+    <string name="card_mode">Moduswahl</string>
+    <string name="mode_osmand">OsmAnd</string>
+    <string name="mode_gpx_nav">GPS/GPX-Navigation</string>
+    <string name="mode_simulation">GPX-Simulation</string>
+    <string name="mode_all">All-in-one</string>
+    <string name="mode_hint_osmand">Die Navigation kommt aus OsmAnd.</string>
+    <string name="mode_hint_gpx_nav">TrailBridge navigiert selbst: GPX-Route und echte GPS-Position.</string>
+    <string name="mode_hint_simulation">Die geladene GPX-Route wird als Testfahrt abgespielt, mit simulierter Position.</string>
+    <string name="mode_hint_all">Alles auf einem Screen: OsmAnd, GPX-Navigation und Simulation.</string>
+    <string name="card_profile">Höhenprofil</string>
+    <string name="navi_button">Navi-Modus</string>
+    <string name="navi_title">Navi</string>
+    <string name="navi_close">Beenden</string>
+    <string name="label_osmand">OsmAnd</string>
+    <string name="label_ble">BLE</string>
+    <string name="sim_chip">Simuliert</string>
+    <string name="gps_none">kein Fix</string>
+    <string name="footer_version">TrailBridge %1$s · GPL-3.0</string>
+
+    <string name="dash">–</string>
+    <string name="unit_kmh">km/h</string>
+    <string name="unit_m">m</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_rpm">rpm</string>
+
+    <!-- Navigationskarte -->
+    <string name="nav_none">Keine Navigation</string>
+    <string name="nav_then">danach: %1$s in %2$s</string>
+    <string name="nav_remaining">Ziel: %1$s · %2$s</string>
+    <string name="maneuver_depart">Start</string>
+    <string name="maneuver_arrive">Ziel</string>
+    <string name="maneuver_straight">Geradeaus</string>
+    <string name="maneuver_slight_left">Leicht links</string>
+    <string name="maneuver_left">Links abbiegen</string>
+    <string name="maneuver_sharp_left">Scharf links</string>
+    <string name="maneuver_slight_right">Leicht rechts</string>
+    <string name="maneuver_right">Rechts abbiegen</string>
+    <string name="maneuver_sharp_right">Scharf rechts</string>
+    <string name="maneuver_keep_left">Links halten</string>
+    <string name="maneuver_keep_right">Rechts halten</string>
+    <string name="maneuver_uturn">Wenden</string>
+    <string name="maneuver_roundabout">Kreisverkehr</string>
+    <string name="maneuver_roundabout_exit">Kreisverkehr, %1$d. Ausfahrt</string>
+    <string name="maneuver_unknown">Weiter</string>
 </resources>

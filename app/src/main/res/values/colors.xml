@@ -1,6 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Icon-Farben: dunkles Teal, Bruecke ueber Wasser/Trail -->
-    <color name="ic_launcher_background">#0F5C66</color>
-    <color name="ic_launcher_foreground">#FFFFFF</color>
+    <!-- Rim & Ridge: Farbpalette des TRGB-BikeComputers, 1:1 uebernommen aus
+         dessen doc/design/rim-ridge-design-system.md, Abschnitt 1 (die Werte
+         dort sind verbindlich, hier nicht "verbessern"). -->
+    <color name="rr_background">#161B1F</color>
+    <color name="rr_rim_outline">#3A362E</color>
+    <color name="rr_arc_track">#332F28</color>
+    <color name="rr_brass">#CBA36B</color>
+    <color name="rr_parchment_bright">#F3ECDF</color>
+    <color name="rr_parchment">#E7E2D6</color>
+    <color name="rr_muted">#9BA097</color>
+    <color name="rr_sage">#7FA08F</color>
+    <color name="rr_panel_bg">#1E252B</color>
+    <color name="rr_tour_bg">#282019</color>
+
+    <!-- Funktionsfarben: die fuenf HF-Zonenfarben des BikeComputers. Auf dem
+         Handy nur fuer Zustaende (ok/Warnung/Fehler) benutzt, wie bei den
+         Log-Level-Badges im Web-Dashboard des BikeComputers. -->
+    <color name="rr_zone_blue">#6C90B0</color>
+    <color name="rr_zone_green">#6FA98C</color>
+    <color name="rr_zone_yellow">#D7B463</color>
+    <color name="rr_zone_orange">#CE8A4C</color>
+    <color name="rr_zone_red">#C1604A</color>
+
+    <!-- Aus dem Web-Dashboard des BikeComputers (stylesheet.css): Eingabe-/
+         Konsolenflaeche und Messing-Rahmen bei 32 % Deckkraft. -->
+    <color name="rr_console_bg">#12161A</color>
+    <color name="rr_brass_dim">#52CBA36B</color>
+    <color name="rr_brass_faint">#26CBA36B</color>
+
+    <!-- Launcher-Icon -->
+    <color name="ic_launcher_background">#161B1F</color>
 </resources>
