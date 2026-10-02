@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * Follows an imported {@link GpxRoute} with GPS fixes: matches the position
- * onto the route, and produces the NavState for the BikeComputer plus -- while
- * a climb is ahead -- the elevation profile to send.
+ * onto the route, and produces the NavState for the BikeComputer plus -- from
+ * shortly before a climb to its summit -- the elevation profile to send.
  *
  * No Android dependencies; feed it fixes, act on the {@link Result}. Not
  * thread-safe (TrailBridgeService calls it from the main thread only).
@@ -20,10 +20,12 @@ public final class RouteNavigator {
     /** ...and how far behind (GPS jitter, standing still, a short back-track). */
     private static final double SEARCH_BEHIND_M = 50;
 
-    /** Grade ahead that starts / ends a "climb" (with hysteresis). */
-    static final double CLIMB_ON = 0.04;
-    static final double CLIMB_OFF = 0.02;
-    private static final double LOOK_AHEAD_M = 200;
+    /** A climb's profile goes out once the rider is this close to its foot. */
+    static final double APPROACH_M = 500;
+    /** The summit counts as reached at its raster sample (half a step before it). */
+    private static final double SUMMIT_REACHED_M = ElevationProfile.STEP_M / 2.0;
+    /** A climb just finished only counts again this far below its summit (GPS jitter at the top). */
+    private static final double REENTER_M = 100;
 
     private static final double DEFAULT_SPEED_MS = 15 / 3.6;
     private static final double MIN_SPEED_MS = 1.5;
@@ -52,12 +54,15 @@ public final class RouteNavigator {
     private boolean matched = false;
     private double speedMs = DEFAULT_SPEED_MS;
 
-    private boolean climbing = false;
+    private final List<ElevationProfile.Climb> climbs;
     private ProfileFrame sentProfile = null;
+    private int sentClimb = -1;     // index of the climb sentProfile belongs to
+    private int passedClimb = -1;   // the climb whose summit the rider reached last
 
     public RouteNavigator(GpxRoute route) {
         this.route = route;
         this.elevation = ElevationProfile.of(route);
+        this.climbs = elevation == null ? Collections.<ElevationProfile.Climb>emptyList() : elevation.climbs();
     }
 
     public GpxRoute route() {
@@ -78,8 +83,9 @@ public final class RouteNavigator {
     public void seekTo(double progressM) {
         this.progressM = Math.max(0, Math.min(progressM, route.totalM));
         matched = true;
-        climbing = false;
         sentProfile = null;
+        sentClimb = -1;
+        passedClimb = -1;
     }
 
     /**
@@ -102,8 +108,8 @@ public final class RouteNavigator {
             // Progress stays where it was; the profile of the last known
             // stretch stays meaningless while we're elsewhere -> clear it.
             boolean clear = sentProfile != null;
-            climbing = false;
             sentProfile = null;
+            sentClimb = -1;
             return new Result(offRouteState((int) Math.round(match[1])), null, clear, true);
         }
 
@@ -111,28 +117,65 @@ public final class RouteNavigator {
         ProfileFrame send = null;
         boolean clear = false;
         if (elevation != null) {
-            double grade = elevation.gradeAhead(progressM, LOOK_AHEAD_M);
             int maxSteps = ProfileFrameEncoder.maxSteps(maxPayload);
-            if (!climbing && grade >= CLIMB_ON && maxSteps > 0) {
-                climbing = true;
-                send = cut(maxSteps);
-            } else if (climbing && grade < CLIMB_OFF) {
-                climbing = false;
-                clear = sentProfile != null;
+            int k = climbAhead();
+            if (k >= 0 && maxSteps > 0) {
+                ElevationProfile.Climb climb = climbs.get(k);
+                if (k != sentClimb) {
+                    send = cut(climb, k, maxSteps, 0);
+                } else if (sentProfile.startAlongM + sentProfile.lengthM() < climb.summitM - SUMMIT_REACHED_M
+                        && progressM > sentProfile.startAlongM + sentProfile.lengthM() / 2.0) {
+                    // The climb is longer than one frame holds even on the coarsest raster, and the
+                    // rider is past the middle of what the display has: send the next stretch,
+                    // on the same raster.
+                    send = cut(climb, k, maxSteps, sentProfile.stepM);
+                }
+            }
+            if (send == null && sentProfile != null && k != sentClimb) {
+                // Summit reached and no further climb close, or one too short to draw.
+                clear = true;
                 sentProfile = null;
-            } else if (climbing && sentProfile != null && maxSteps > 0
-                    && progressM > sentProfile.startAlongM + sentProfile.lengthM() / 2.0
-                    && sentProfile.startAlongM + sentProfile.lengthM() < route.totalM - ElevationProfile.STEP_M) {
-                // Rider is past the middle of what the display has: send the next stretch.
-                send = cut(maxSteps);
+                sentClimb = -1;
             }
         }
         return new Result(nav, send, clear, false);
     }
 
-    private ProfileFrame cut(int maxSteps) {
-        ProfileFrame f = elevation.slice(progressM, maxSteps, ProfileFrameEncoder.MIN_STEPS);
-        if (f != null) sentProfile = f;
+    /**
+     * The climb the rider is on or approaching: the next summit ahead, if its
+     * foot is at most APPROACH_M away.
+     *
+     * @return index into climbs, -1 if none
+     */
+    private int climbAhead() {
+        if (sentClimb >= 0 && progressM >= climbs.get(sentClimb).summitM - SUMMIT_REACHED_M) {
+            passedClimb = sentClimb;
+        }
+        double p = progressM;
+        if (passedClimb >= 0) {
+            double summitM = climbs.get(passedClimb).summitM;
+            if (p < summitM - REENTER_M) {
+                passedClimb = -1;
+            } else {
+                p = Math.max(p, summitM);
+            }
+        }
+        for (int k = 0; k < climbs.size(); k++) {
+            ElevationProfile.Climb c = climbs.get(k);
+            if (p < c.summitM - SUMMIT_REACHED_M) {
+                return p >= c.footM - APPROACH_M ? k : -1;
+            }
+        }
+        return -1;
+    }
+
+    /** The profile from the rider to the climb's summit. */
+    private ProfileFrame cut(ElevationProfile.Climb climb, int index, int maxSteps, int stepM) {
+        ProfileFrame f = elevation.slice(progressM, climb.summitM, maxSteps, ProfileFrameEncoder.MIN_STEPS, stepM);
+        if (f != null) {
+            sentProfile = f;
+            sentClimb = index;
+        }
         return f;
     }
 

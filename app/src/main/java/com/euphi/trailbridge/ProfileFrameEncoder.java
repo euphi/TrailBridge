@@ -18,9 +18,10 @@ public final class ProfileFrameEncoder {
     public static final int TAG_STEP_M = 0x02;
     public static final int TAG_BASE_ALT_DM = 0x03;
     public static final int TAG_DELTAS_DM = 0x04;
+    public static final int TAG_DELTA_SCALE_DM = 0x05;
 
-    /** version + type, then START (6) + STEP (3) + BASE (4) + the DELTAS header (2). */
-    private static final int OVERHEAD = 2 + 6 + 3 + 4 + 2;
+    /** version + type, then START (6) + STEP (3) + BASE (4) + DELTA_SCALE (3, if sent) + the DELTAS header (2). */
+    private static final int OVERHEAD = 2 + 6 + 3 + 4 + 3 + 2;
     private static final int MAX_STEPS = 200;
     /** A profile shorter than this (8 * 25 m = 200 m) isn't worth drawing. */
     public static final int MIN_STEPS = 8;
@@ -61,6 +62,12 @@ public final class ProfileFrameEncoder {
         out.write(TAG_BASE_ALT_DM);
         out.write(2);
         writeLe(out, f.baseAltDm, 2);
+
+        if (f.deltaScaleDm != 1) {
+            out.write(TAG_DELTA_SCALE_DM);
+            out.write(1);
+            out.write(f.deltaScaleDm & 0xFF);
+        }
 
         out.write(TAG_DELTAS_DM);
         out.write(f.deltasDm.length);

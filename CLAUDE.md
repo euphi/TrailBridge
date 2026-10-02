@@ -67,6 +67,11 @@ Stile `TB.*`, drei Schriften) -- keine Hex-Werte oder Fremdschriften im Layout.
   siehe Kommentare in `OsmAndLink.java`. Nicht aus Vermutung ändern, sondern
   gegen die OsmAnd-Quelle prüfen (`osmandapp/OsmAnd`, Datei
   `OsmAnd/src/net/osmand/plus/helpers/ExternalApiHelper.java`).
+- Die Anstiegs-Kriterien (Fuß 3 m auf 100 m; Gipfel bei > 30 m Gefälle oder
+  2 km ohne 0,5 % Steigung) stehen doppelt: in `ElevationProfile.java` und als
+  Standardwerte in `ClimbProfile.h` (`Climb::Config`) der Firmware, die Fuß und
+  Gipfel im gesendeten Profil selbst sucht. Nur gemeinsam ändern (PROTOCOL.md
+  "Was ein Anstieg ist").
 - Rollenverteilung ist bewusst: Handy = BLE-Peripheral/-Server,
   BikeComputer = BLE-Central/-Client (wie bei Komoot). Nicht umdrehen, ohne
   vorher mit mir (dem Nutzer) Rücksprache zu halten -- betrifft auch die

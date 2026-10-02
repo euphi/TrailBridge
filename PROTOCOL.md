@@ -312,13 +312,33 @@ Genauigkeit, vor 320 ms:
 
 Dritter, unabhängiger BLE-Service, nur aktiv, solange TrailBridge eine
 importierte GPX-Route abspielt (siehe README) und die Route Höhendaten hat.
-Er ist **ereignisgetrieben**: TrailBridge sendet ein Profil, sobald eine
-Steigung voraus erkannt wird (mittlere Steigung über die nächsten 200 m
-≥ 4 %, Ende bei < 2 %), sendet bei langen Anstiegen das nächste Stück nach,
-wenn der Fahrer die Mitte des bisherigen erreicht hat, und schickt
-`PROFILE_NONE`, wenn die Steigung vorbei ist, die Route endet oder der
-Fahrer die Route verlässt. **Kein Heartbeat** -- der zuletzt gesendete
-Frame bleibt per Read abrufbar und geht an neu abonnierende Geräte.
+Er ist **ereignisgetrieben**: TrailBridge sendet das Profil eines Anstiegs,
+sobald dessen Fuß höchstens 500 m voraus liegt -- **von der Position des
+Fahrers bis zum Gipfel**, in einem Frame -- und schickt `PROFILE_NONE`, wenn
+der Gipfel erreicht ist (und kein weiterer Anstieg direkt folgt), die Route
+endet oder der Fahrer die Route verlässt. **Kein Heartbeat** -- der zuletzt
+gesendete Frame bleibt per Read abrufbar und geht an neu abonnierende Geräte.
+
+### Was ein Anstieg ist
+
+TrailBridge sucht die Anstiege beim Laden der Route (25-m-Raster, über ca.
+125 m geglättet; `ElevationProfile.findClimbs`):
+
+- **Fuß:** der erste Punkt, ab dem die Route auf den nächsten 100 m um
+  mindestens 3 m steigt. Ein sanfter Beginn gehört also schon zum Anstieg.
+- **Gipfel:** der höchste Punkt, bevor die Route entweder um **mehr als 30 m
+  abfällt** oder **über 2 km nicht weiter steigt** (im Mittel weniger als
+  0,5 % ab dem bisher höchsten Punkt) -- oder endet. Eine kürzere Senke oder
+  ein kürzeres Flachstück gehört zum Anstieg.
+- Unter 10 m Höhenunterschied zwischen Fuß und Gipfel ist es kein Anstieg.
+
+Beispiel Galibier: Von Süden (36 km über den Lautaret, mit Flachstücken) ist
+es ein Anstieg. Von Norden sind es zwei -- nach dem Col du Télégraphe geht es
+knapp 5 km und rund 165 m bergab nach Valloire.
+
+Die Firmware (`ClimbProfile.cpp`) findet Fuß und Gipfel im gesendeten Profil
+mit denselben Kriterien; das Profilende gilt ihr als Gipfel. Die Standardwerte
+beider Seiten müssen zusammenpassen.
 
 ### UUIDs
 
@@ -347,13 +367,35 @@ Byte 2..: TLV-Einträge (nur bei PROFILE_UPDATE)
 | Tag | Name | Länge | Format |
 |---|---|---|---|
 | 0x01 | START_REMAINING_DISTANCE_M | 4 | uint32 LE, Restdistanz der Route bis zum Ziel **am ersten Profilpunkt** |
-| 0x02 | STEP_M | 1 | Abstand der Profilpunkte in Metern (aktuell 25) |
+| 0x02 | STEP_M | 1 | Abstand der Profilpunkte in Metern: 25, 50, ... 250 (siehe "Raster") |
 | 0x03 | BASE_ALT_DM | 2 | int16 LE, Höhe des ersten Punkts in Dezimetern |
-| 0x04 | DELTAS_DM | N | N × int8: Höhenänderung in dm von Punkt k zu Punkt k+1 |
+| 0x04 | DELTAS_DM | N | N × int8: Höhenänderung von Punkt k zu Punkt k+1, in Einheiten von `DELTA_SCALE_DM` dm |
+| 0x05 | DELTA_SCALE_DM | 1 | uint8, optional: Einheit der Deltas in Dezimetern. Fehlt der Tag, gilt 1 |
 
 Punkt k liegt bei `START_REMAINING_DISTANCE_M - k × STEP_M` Restdistanz,
-seine Höhe ist `BASE_ALT_DM + Σ DELTAS_DM[0..k-1]` (in dm). Es gibt N+1
-Punkte. Die Höhen sind über ca. 125 m geglättet (GPX-Höhen sind verrauscht).
+seine Höhe ist `BASE_ALT_DM + DELTA_SCALE_DM × Σ DELTAS_DM[0..k-1]` (in dm).
+Es gibt N+1 Punkte. Die Höhen sind über ca. 125 m geglättet (GPX-Höhen sind
+verrauscht).
+
+**Raster:** Der ganze Rest des Anstiegs soll in einen Frame passen. Bis
+N × 25 m (5 km bei N = 200) ist `STEP_M` 25; für längere Anstiege wird es das
+kleinste Vielfache von 25 m, mit dem es passt, höchstens 250 m (50 km bei
+N = 200; ein 36-km-Anstieg kommt mit 200 m). Das Raster wird vom Gipfel aus
+rückwärts gelegt: **Der letzte Punkt ist der Gipfel**, der erste liegt an der
+Position des Fahrers oder weniger als einen Schritt dahinter (nur direkt am
+Routenanfang kann er knapp vor dem Fahrer liegen).
+
+Auf einem groben Raster passt ein steiler Schritt nicht mehr als dm in ein
+int8 (±12,7 m; bei 200 m wären das 6,35 %). Dann sendet TrailBridge
+`DELTA_SCALE_DM` mit dem kleinsten Wert, bei dem alle Deltas passen (z. B. 2 =
+Deltas in 0,2 m). Bei `STEP_M` = 25 fehlt der Tag immer; Frames für Anstiege
+bis 5 km sehen also aus wie bisher.
+
+Passt ein Anstieg selbst mit 250 m nicht in einen Frame (kleine MTU, oder
+über 50 km), endet das Profil nach N Schritten vor dem Gipfel. Das nächste
+Stück folgt, wenn der Fahrer die Mitte des gesendeten erreicht hat -- auf
+demselben Raster (gleiches `STEP_M`, Abstand der Startpunkte ein Vielfaches
+davon), damit die Firmware die Stücke zusammenfügen kann.
 
 **Position im Profil ohne Wegstreckenzähler:** Die Firmware kennt
 `REMAINING_DISTANCE_M` aus dem Nav-Frame (0x08); die Position des Fahrers im
@@ -363,7 +405,7 @@ Reconnects. Liegt der Wert außerhalb `0..N × STEP_M`, ist das Profil
 veraltet bzw. noch nicht erreicht.
 
 **Länge und MTU:** N richtet sich nach der ausgehandelten MTU (Payload
-`ATT_MTU - 3`): `N = min(200, Payload - 17)`; unter 8 Punkten (200 m) sendet
+`ATT_MTU - 3`): `N = min(200, Payload - 20)`; unter 8 Punkten (200 m) sendet
 TrailBridge kein Profil. Die App nimmt das Minimum über alle verbundenen
 Geräte und geht ohne Angabe von den 256 aus, die die Firmware anfordert.
 
@@ -380,6 +422,18 @@ Profil ab 4200 m Restdistanz, Start auf 34,5 m, drei Schritte (+1,2 m,
 02 01 19                                           STEP_M = 25
 03 02 59 01                                        BASE_ALT_DM = 345
 04 03 0C 0D FE                                     DELTAS_DM = +12, +13, -2
+```
+
+Langer Anstieg auf grobem Raster: ab 36 000 m Restdistanz, Start auf 1200 m,
+200-m-Schritte, Deltas in 0,2 m (+12,0 m, +13,8 m, −0,6 m):
+
+```
+01 01                                              version=1, type=PROFILE_UPDATE
+01 04 A0 8C 00 00                                  START_REMAINING_DISTANCE_M = 36000
+02 01 C8                                           STEP_M = 200
+03 02 E0 2E                                        BASE_ALT_DM = 12000
+05 01 02                                           DELTA_SCALE_DM = 2
+04 03 3C 45 FD                                     DELTAS_DM = +60, +69, -3 (× 0,2 m)
 ```
 
 ## Navigation aus einer GPX-Route

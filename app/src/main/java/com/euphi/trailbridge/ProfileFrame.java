@@ -8,17 +8,25 @@ public final class ProfileFrame {
     public final int stepM;
     /** Altitude of point 0 in decimetres. */
     public final int baseAltDm;
-    /** Altitude change per step in decimetres (point k+1 minus point k). */
+    /** Altitude change per step (point k+1 minus point k), in units of deltaScaleDm decimetres. */
     public final byte[] deltasDm;
+    /** Unit of the deltas in decimetres; 1 unless the raster is too coarse for a byte of decimetres. */
+    public final int deltaScaleDm;
     /** Route distance from the start of the route to point 0 -- app-side only, not sent. */
     public final double startAlongM;
 
     public ProfileFrame(int startRemainingM, int stepM, int baseAltDm, byte[] deltasDm,
                         double startAlongM) {
+        this(startRemainingM, stepM, baseAltDm, deltasDm, 1, startAlongM);
+    }
+
+    public ProfileFrame(int startRemainingM, int stepM, int baseAltDm, byte[] deltasDm,
+                        int deltaScaleDm, double startAlongM) {
         this.startRemainingM = startRemainingM;
         this.stepM = stepM;
         this.baseAltDm = baseAltDm;
         this.deltasDm = deltasDm;
+        this.deltaScaleDm = deltaScaleDm;
         this.startAlongM = startAlongM;
     }
 
@@ -33,7 +41,7 @@ public final class ProfileFrame {
         int dm = baseAltDm;
         alt[0] = dm / 10f;
         for (int k = 0; k < deltasDm.length; k++) {
-            dm += deltasDm[k];
+            dm += deltasDm[k] * deltaScaleDm;
             alt[k + 1] = dm / 10f;
         }
         return alt;
@@ -53,8 +61,8 @@ public final class ProfileFrame {
      * way the BikeComputer works it out (PROTOCOL.md): START_REMAINING_DISTANCE_M minus
      * the REMAINING_DISTANCE_M of the nav frame.
      *
-     * The profile is cut at the raster sample nearest to the rider, so the rider can be up to
-     * half a step "before" its first point; one step of slack either way is clamped to the ends.
+     * The profile's first point is the raster sample nearest to the rider or the one behind, so
+     * the rider can be a little "before" it; one step of slack either way is clamped to the ends.
      *
      * @return NaN if the rider is further outside than that: the profile is stale or not reached yet
      */

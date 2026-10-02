@@ -121,13 +121,13 @@ Hauptscreen gestartet -- der Navi-Modus hat keine Bedienelemente dafür.
    ([`ClimbProfileView`](app/src/main/java/com/euphi/trailbridge/ClimbProfileView.java)).
 
 Das Profil ist **genau das gesendete `ProfileFrame`** (PROTOCOL.md "Höhenprofil-Service"),
-nicht die ganze Route: Es erscheint, wenn voraus eine Steigung erkannt wird, und
-verschwindet mit `PROFILE_NONE`, im Takt mit dem Gerät. Der Fahrer steht darin an
+nicht die ganze Route: Es erscheint 500 m vor dem Fuß eines Anstiegs, reicht bis zu
+dessen Gipfel und verschwindet dort mit `PROFILE_NONE`, im Takt mit dem Gerät. Der Fahrer steht darin an
 `START_REMAINING_DISTANCE_M − REMAINING_DISTANCE_M` (`ProfileFrame.riderOffsetM`, wie die
 Firmware; ±1 Raster-Schritt Toleranz, sonst gilt das Profil als veraltet und die
 Karte bleibt aus). Das bereits Gefahrene ist abgedunkelt, das Stück voraus voll in
 Salbei; unter dem Ende steht die Restdistanz. In der Kopfzeile der Karte: mittlere
-Steigung (`ic_gradient`) und Höhengewinn bis zum Profilende (`ic_height`) -- jeweils ab
+Steigung (`ic_gradient`) und Höhengewinn bis zum Profilende, also dem Gipfel (`ic_height`) -- jeweils ab
 der Fahrerposition gerechnet.
 
 Navigation und Position sitzen oben fest; die Profilkarte hängt darunter und schiebt
