@@ -100,3 +100,7 @@ TrailBridge steht unter der [GNU General Public License v3.0 oder später](LICEN
 (GPL-3.0-or-later). Die übernommenen OsmAnd-AIDL-Dateien
 (`net.osmand.aidlapi.*`) stammen aus dem GPLv3-lizenzierten
 [OsmAnd-Repo](https://github.com/osmandapp/OsmAnd) (© OsmAnd BV).
+
+Die gebündelten Schriften (Big Shoulders Display, IBM Plex Sans/Mono) stehen unter der
+SIL Open Font License 1.1, nicht unter der GPL -- Herkunft und Lizenztexte in
+[fonts/](fonts/README.md).

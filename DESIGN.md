@@ -45,17 +45,13 @@ BikeComputer hat auch keine Tag-Variante); `Theme.TrailBridge` in
 | Kartenköpfe, Einheiten, Rohdaten | IBM Plex Mono Regular / Medium | `TB.Eyebrow`, `TB.Caption`, `TB.Console` |
 
 Nie nach Geschmack mischen. Die Dateien liegen als TTF unter
-[`res/font/`](app/src/main/res/font/): dieselben fünf Latin-Subsets, die schon
-das Web-Dashboard des BikeComputers ausliefert (dort als WOFF2, hier mit
-`fontTools` nach TTF gewandelt, da Android kein WOFF2 lädt). Sie decken
-Umlaute, `ß`, `« » … ° ±` ab, **keine Pfeile** (`→ ←`) -- dafür Vektor-Icons nehmen.
+[`res/font/`](app/src/main/res/font/), **unverändert** aus den Upstream-Releases (kein
+Subset: "Plex" ist ein Reserved Font Name der OFL). Sie decken Umlaute, `ß`,
+`« » … ° ±` ab, **keine Pfeile** (`→ ←`) -- dafür Vektor-Icons nehmen.
 
-Lizenz der Schriften: SIL Open Font License 1.1.
-
-- Big Shoulders Display -- Copyright 2019 The Big Shoulders Project Authors
-  (https://github.com/xotypeco/big_shoulders)
-- IBM Plex Sans (2019) / IBM Plex Mono (2017) -- Copyright IBM Corp.
-  (https://github.com/IBM/plex)
+Lizenz: SIL Open Font License 1.1. Herkunft, Versionen, Copyright-Zeilen, Prüfsummen
+und die Lizenztexte stehen in [`fonts/`](fonts/README.md); beim Austauschen oder
+Hinzufügen einer Schrift dort mitpflegen.
 
 ## Komponenten
 
