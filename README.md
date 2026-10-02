@@ -10,7 +10,8 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
 
 - Liest OsmAnds Navigation per AIDL-API aus (Manöver, Straßennamen,
   übernächstes Manöver, Restdistanz/-zeit) und funkt sie als kompaktes
-  TLV-Protokoll per BLE an den BikeComputer -- siehe [PROTOCOL.md](PROTOCOL.md).
+  TLV-Protokoll per BLE an den BikeComputer -- siehe [PROTOCOL.md](PROTOCOL.md)
+  ([English](PROTOCOL.en.md)).
 - Zweiter, unabhängiger BLE-Service mit der rohen Handy-GPS-Position, direkt
   vom GPS-Chip -- funktioniert auch ohne laufendes OsmAnd.
 - **GPX-Routen:** GPX-Datei öffnen/teilen/laden, "Route starten" -- TrailBridge
@@ -42,6 +43,9 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_app.png" height="480" alt="TrailBridge-App während einer OsmAnd-Navigation">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_bikecomputer.jpg" height="480" alt="TRGB-BikeComputer zeigt das weitergeleitete Abbiegemanöver">
 </p>
+
+Dokumentation mit Screenshots, deutsch und englisch:
+<https://euphi.github.io/TRGB-BikeComputer/trailbridge/>
 
 ## AIDL
 

@@ -14,6 +14,10 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
 Testen), [`BUILD.md`](BUILD.md) (Setup/Build) und [`PROTOCOL.md`](PROTOCOL.md)
 (das BLE-Wire-Format -- verbindlicher Vertrag zwischen App und Firmware,
 nicht auf eigene Faust ändern).
+[`PROTOCOL.en.md`](PROTOCOL.en.md) ist die englische Übersetzung -- **bei jeder
+Änderung an `PROTOCOL.md` mitziehen**. Beide erscheinen auf der Doku-Seite
+<https://euphi.github.io/TRGB-BikeComputer/trailbridge/PROTOCOL/> (wird im
+BikeComputer-Repo gebaut, das die beiden Dateien beim Bauen von hier kopiert).
 Für alles an der Oberfläche zusätzlich [`DESIGN.md`](DESIGN.md): die App
 folgt dem Rim-&-Ridge-Designsystem des BikeComputers (Farb-Tokens `rr_*`,
 Stile `TB.*`, drei Schriften) -- keine Hex-Werte oder Fremdschriften im Layout.
