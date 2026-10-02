@@ -1,0 +1,4 @@
+• Neuer Look im Rim-&-Ridge-Design des BikeComputers
+• Navi-Modus: nur Navigation, Position und das gesendete Höhenprofil
+• Moduswahl: OsmAnd, GPS/GPX-Navigation, GPX-Simulation, All-in-one
+• GPX-Routen: eigene Navigation, Höhenprofil-Service, Testfahrt mit simulierten Sensorwerten

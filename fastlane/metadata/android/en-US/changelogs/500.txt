@@ -1,0 +1,4 @@
+• New look in the BikeComputer's Rim & Ridge design
+• Navigation mode: only navigation, position and the transmitted elevation profile
+• Mode selection: OsmAnd, GPS/GPX navigation, GPX simulation, all-in-one
+• GPX routes: own navigation, elevation profile service, test ride with simulated sensor values
