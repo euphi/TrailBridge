@@ -297,12 +297,32 @@ Fix at 52.5163° N, 13.3777° E, altitude 34 m, 4.2 m/s, bearing 87.5°, accurac
 ## Elevation profile service
 
 A third, independent BLE service, only active while TrailBridge plays an imported GPX
-route and the route has elevation data. It is **event-driven**: TrailBridge sends the
-profile of a climb as soon as its foot is at most 500 m ahead -- **from the rider's
-position to the summit**, in one frame -- and sends `PROFILE_NONE` when the summit is
-reached (and no further climb follows directly), the route ends or the rider leaves the
-route. **No heartbeat** -- the frame sent last stays available by read and goes to newly
-subscribing devices.
+route and the route has elevation data. The profile is sent **all the time** -- on flat
+ground and downhill, too, it is always of interest (test ride 2026-10-04) -- as a
+**rolling window of the road ahead**, starting at the rider. A **climb** in it is not
+guessed from the points by the firmware but **announced** by TrailBridge with its whole
+extent (tags 0x07..0x0A, see below): it never ends before the summit, and category and
+length stay those of the foot, even when the rider is already in the middle and the foot
+is no longer in the frame. The flag `ROLLING` (tag 0x06) marks such frames.
+
+A new frame goes out
+
+- at the start and after the profile was taken back (rider off the route),
+- when the climb to announce changes: its foot comes within 500 m (the window then runs
+  from the rider **to the summit**), or its summit is reached (the window without an
+  announcement, the road beyond the summit),
+- when the rider has passed the middle of a frame that does not reach as far as it should:
+  the window moves on (window without a climb: 200 steps of 25 m = 5 km; a climb that does
+  not fit in one frame even on the coarsest raster).
+
+Nothing in between. **`PROFILE_NONE` only** when the route ends or the rider leaves it --
+no longer at the summit: there the next frame simply lacks the announcement and the
+firmware knows the climb is over. **No heartbeat** -- the frame sent last stays available
+by read and goes to newly subscribing devices.
+
+Older TrailBridge versions (without the flag) send only the profile of a climb, from the
+position to the summit, and `PROFILE_NONE` at the summit; the firmware then finds the
+climb in the profile itself (see below) and stays compatible.
 
 ### What a climb is
 
@@ -320,9 +340,10 @@ Example Galibier: from the south (36 km over the Lautaret, with flat sections) i
 climb. From the north it is two -- after the Col du Télégraphe the road descends for
 almost 5 km and about 165 m to Valloire.
 
-The firmware (`ClimbProfile.cpp`) finds foot and summit in the profile sent with the same
-criteria; the end of the profile counts as the summit for it. The defaults of both sides
-must match.
+Only for frames **without** `ROLLING` (older TrailBridge versions) the firmware
+(`ClimbProfile.cpp`) finds foot and summit in the profile sent with the same criteria; the
+end of the profile counts as the summit for it. With `ROLLING` the announcement alone
+counts; TrailBridge applies the criteria of this section.
 
 ### UUIDs
 
@@ -354,6 +375,19 @@ Byte 2..: TLV entries (only for PROFILE_UPDATE)
 | 0x03 | BASE_ALT_DM | 2 | int16 LE, altitude of the first point in decimetres |
 | 0x04 | DELTAS_DM | N | N × int8: change of altitude from point k to point k+1, in units of `DELTA_SCALE_DM` dm |
 | 0x05 | DELTA_SCALE_DM | 1 | uint8, optional: unit of the deltas in decimetres. If the tag is missing, 1 applies |
+| 0x06 | FLAGS | 1 | uint8, optional: bit 0 `ROLLING` = rolling window of the road ahead; a climb is only the one announced in 0x07..0x0A. If the tag is missing: frame of an older TrailBridge (profile up to the summit) |
+| 0x07 | CLIMB_FOOT_REMAINING_M | 4 | uint32 LE, remaining distance of the route to the destination **at the foot** of the announced climb (may lie behind the first point, i.e. be larger than `START_REMAINING_DISTANCE_M`) |
+| 0x08 | CLIMB_SUMMIT_REMAINING_M | 4 | uint32 LE, remaining distance **at the summit** (may lie beyond the last point) |
+| 0x09 | CLIMB_FOOT_ALT_DM | 2 | int16 LE, altitude of the foot in decimetres |
+| 0x0A | CLIMB_SUMMIT_ALT_DM | 2 | int16 LE, altitude of the summit in decimetres |
+
+The four climb tags come **all together or not at all**; if they are missing with
+`ROLLING` set, there is no climb (neither under the rider nor at most 500 m ahead). The
+climb that is announced is the one the rider is on or whose foot is at most 500 m ahead,
+until its summit is reached (to half a raster step). Repeated frames of the same climb
+carry the **same** values -- the firmware recognises it by them and keeps category and
+display stable. Category = length × mean gradient of the whole climb (foot to summit), not
+of the rest.
 
 Point k lies at a remaining distance of `START_REMAINING_DISTANCE_M - k × STEP_M`, its
 altitude is `BASE_ALT_DM + DELTA_SCALE_DM × Σ DELTAS_DM[0..k-1]` (in dm). There are N+1
@@ -383,7 +417,7 @@ point. This holds along the route, not as the crow flies, and survives reconnect
 value lies outside `0..N × STEP_M`, the profile is stale or not reached yet.
 
 **Length and MTU:** N depends on the negotiated MTU (payload `ATT_MTU - 3`):
-`N = min(200, payload - 20)`; below 8 points (200 m) TrailBridge sends no profile. The
+`N = min(200, payload - 20)` (with `ROLLING` another 23 bytes for the flag and the climb tags: `payload - 43`); below 8 points (200 m) TrailBridge sends no profile. The
 app takes the minimum over all connected devices and, without information, assumes the
 256 that the firmware requests.
 
@@ -392,7 +426,7 @@ The firmware skips unknown tags as everywhere (respect the length).
 ### Example
 
 Profile from 4200 m of remaining distance, start at 34.5 m, three steps (+1.2 m, +1.3 m,
-−0.2 m):
+−0.2 m) -- older form, without `ROLLING`:
 
 ```
 01 01                                              version=1, type=PROFILE_UPDATE
@@ -401,6 +435,24 @@ Profile from 4200 m of remaining distance, start at 34.5 m, three steps (+1.2 m,
 03 02 59 01                                        BASE_ALT_DM = 345
 04 03 0C 0D FE                                     DELTAS_DM = +12, +13, -2
 ```
+
+Rolling window with an announced climb: foot at 5000 m of remaining distance at 100.0 m,
+summit at 3500 m at 136.0 m (the points in between as above):
+
+```
+01 01                                              version=1, type=PROFILE_UPDATE
+01 04 68 10 00 00                                  START_REMAINING_DISTANCE_M = 4200
+02 01 19                                           STEP_M = 25
+03 02 59 01                                        BASE_ALT_DM = 345
+06 01 01                                           FLAGS = ROLLING
+07 04 88 13 00 00                                  CLIMB_FOOT_REMAINING_M = 5000 (behind the first point)
+08 04 AC 0D 00 00                                  CLIMB_SUMMIT_REMAINING_M = 3500
+09 02 E8 03                                        CLIMB_FOOT_ALT_DM = 1000
+0A 02 50 05                                        CLIMB_SUMMIT_ALT_DM = 1360
+04 03 0C 0D FE                                     DELTAS_DM = +12, +13, -2
+```
+
+Without a climb: the same frame without the four tags 0x07..0x0A.
 
 A long climb on a coarse raster: from 36 000 m of remaining distance, start at 1200 m,
 200 m steps, deltas in 0.2 m (+12.0 m, +13.8 m, −0.6 m):
