@@ -49,6 +49,26 @@ public class GpxParserTest {
     }
 
     @Test
+    public void trackWithBareWayPointsGetsTurnsFromGeometry() throws Exception {
+        // bikerouter.de: the track is the route, the rtept are only start / via / destination
+        GpxRoute base = Routes.polyline(L, d -> 100);
+        StringBuilder trk = new StringBuilder();
+        for (int i = 0; i < base.pointCount(); i++) {
+            trk.append("<trkpt lat=\"").append(base.lat[i]).append("\" lon=\"").append(base.lon[i]).append("\"/>");
+        }
+        String gpx = "<gpx><rte><name>Tour</name>"
+                + rtept(0, 0, "<name>Start</name>")
+                + rtept(0, 300, "<name>Via</name>")
+                + rtept(300, 300, "<name>Ziel</name>")
+                + "</rte><trk><trkseg>" + trk + "</trkseg></trk></gpx>";
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertFalse(r.hasRoutingInfo);                        // the hints are from the geometry
+        assertEquals(3, r.steps.size());                      // DEPART, turn, ARRIVE
+        assertEquals(Maneuver.TURN_RIGHT, r.steps.get(1).maneuver);
+        assertEquals(300, r.steps.get(1).distM, 12);
+    }
+
+    @Test
     public void rteptsWithoutInfoGiveNoHints() throws Exception {
         String gpx = "<gpx><rte>" + rtept(0, 0, "") + rtept(0, 300, "") + rtept(300, 300, "") + "</rte></gpx>";
         GpxRoute r = GpxParser.parse(Routes.stream(gpx), "fallback");

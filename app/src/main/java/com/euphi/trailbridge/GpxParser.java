@@ -33,8 +33,10 @@ import javax.xml.parsers.SAXParserFactory;
  * Recorded tracks may also carry per-point time and, in the
  * TrackPointExtension, heart rate, cadence and power (used by the playback).
  *
- * As soon as the file carries routing info (1 or 2 -- any rtept counts),
- * step 3 is skipped, even if no manoeuvre could be read from it.
+ * As soon as the file carries routing info (1 or 2), step 3 is skipped -- except for a
+ * track (trk) whose rtept say nothing usable (no manoeuvre could be read from any of
+ * them: only way points, e.g. from bikerouter.de): those count as "nothing in the file".
+ * An rte without a trk is its own geometry (a few way points), turns are not derived from it.
  */
 public final class GpxParser {
 
@@ -288,10 +290,25 @@ public final class GpxParser {
                 }
             }
 
+            if (hasInfo && geometry == trk && !rte.isEmpty() && osmandSegs.isEmpty() && !hasTurn(steps)) {
+                // A track with a route that says nothing about turns: bikerouter.de and others write
+                // just the way points (start, vias, destination) as rtept -- "Start" and "Ziel" read
+                // as DEPART and ARRIVE, nothing else. That is no routing info; before (test ride
+                // 2026-10-04) it suppressed the hints and only the distance to the destination showed.
+                hasInfo = false;
+            }
             if (!hasInfo) {
                 steps = TurnDetector.detect(geo);
             }
             return new GpxRoute(name, lat, lon, ele, time, hr, cad, power, steps, hasInfo);
+        }
+
+        /** A manoeuvre that is a turn (not just the start and the destination). */
+        private static boolean hasTurn(List<GpxRoute.Step> steps) {
+            for (GpxRoute.Step st : steps) {
+                if (st.maneuver != Maneuver.DEPART && st.maneuver != Maneuver.ARRIVE && st.maneuver != Maneuver.UNKNOWN) return true;
+            }
+            return false;
         }
 
         /** {maneuver, roundaboutExit}; maneuver NONE if the point says nothing usable. */
