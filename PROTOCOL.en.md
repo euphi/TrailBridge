@@ -272,10 +272,11 @@ UTC_TIME_MS is the time source for the bike computer's clock when there is no Wi
 (NTP). With `GPS_PROVIDER` it is the satellite time, i.e. independent of the phone's
 clock. The current time at sending is `UTC_TIME_MS + FIX_AGE_MS` -- both values come
 from the same frame, so the receiver does not have to know when the fix was made. The
-BLE latency (typically < 100 ms) is not taken into account. **TrailBridge only sends the tag
-if the time agrees with the phone's clock** (±5 s, `GpsTime`): right after being switched on
-the GNSS chip can deliver a time that is off by minutes up to hours (test ride 2026-10-04:
-14.8 h behind, with a correct position). Without the tag the firmware sets no clock. Added later without a new
+BLE latency (typically < 100 ms) is not taken into account. **TrailBridge sends the GPS time only
+if it agrees with the phone's clock** (±5 s, `GpsTime`), else the **phone's time** (as the time of
+the fix: the phone's now minus `FIX_AGE_MS`): right after being switched on the GNSS chip can
+deliver a time that is off by minutes up to hours (test ride 2026-10-04: 14.8 h behind, with a
+correct position). The firmware checks the result once more against its own clock (`ClockSync`). Added later without a new
 version: firmware that does not know the tag skips it by its length; an app without the
 tag simply does not set a clock.
 

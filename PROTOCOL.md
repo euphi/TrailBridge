@@ -286,10 +286,11 @@ UTC_TIME_MS ist die Zeitquelle für die Uhr des BikeComputers, wenn kein WLAN
 von der Handy-Uhr. Die aktuelle Zeit beim Senden ist
 `UTC_TIME_MS + FIX_AGE_MS` -- beide Werte kommen aus demselben Frame, der
 Empfänger muss also nicht wissen, wann der Fix entstand. Die BLE-Latenz
-(typisch < 100 ms) bleibt unberücksichtigt. **TrailBridge sendet den Tag nur, wenn die Zeit
-zur Uhr des Handys passt** (±5 s, `GpsTime`): der GNSS-Chip kann gleich nach dem Einschalten
-eine Zeit liefern, die Minuten bis Stunden danebenliegt (Testfahrt 2026-10-04: 14,8 h
-zurück, bei richtiger Position). Fehlt der Tag, stellt die Firmware keine Uhr. Nachträglich ergänzt, ohne
+(typisch < 100 ms) bleibt unberücksichtigt. **TrailBridge sendet die GPS-Zeit nur, wenn sie
+zur Uhr des Handys passt** (±5 s, `GpsTime`), sonst die **Handy-Zeit** (als Zeit des Fixes: Handy-Jetzt
+minus `FIX_AGE_MS`): der GNSS-Chip kann gleich nach dem Einschalten eine Zeit liefern, die
+Minuten bis Stunden danebenliegt (Testfahrt 2026-10-04: 14,8 h zurück, bei richtiger Position).
+Die Firmware prüft das Ergebnis noch einmal gegen ihre eigene Uhr (`ClockSync`). Nachträglich ergänzt, ohne
 Versionssprung: Firmware, die den Tag nicht kennt, überspringt ihn über die
 Länge; eine App ohne den Tag stellt eben keine Uhr.
 
