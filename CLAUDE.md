@@ -24,6 +24,10 @@ Stile `TB.*`, drei Schriften) -- keine Hex-Werte oder Fremdschriften im Layout.
 
 ## Stand
 
+Was offen und geplant ist, steht in [`ROADMAP.md`](ROADMAP.md) -- die Roadmap
+für TrailBridge liegt hier, nicht im BikeComputer-Repo (dessen
+`doc/ROADMAP.md` führt die Firmware-Seite).
+
 - **Meilenstein 1 (fertig):** `OsmAndLink.java` -- Bindung an OsmAnds AIDL-API
   (`net.osmand.aidl.OsmandAidlServiceV2`), Polling von `getAppInfo()`.
 - **Meilenstein 2 (fertig):** `BikeComputerGattServer.java` +
@@ -41,11 +45,15 @@ Stile `TB.*`, drei Schriften) -- keine Hex-Werte oder Fremdschriften im Layout.
   fest gepinnt (Android-Peripherals rotieren die Adresse), kein manueller
   Wechsel der Nav-Anzeige.
 
-- **Meilenstein 4 (Branch `feature/gpx-route`, nur Debug-Build, nicht
-  released):** GPX-Import + eigene Navigation (`GpxParser`, `TurnDetector`,
+- **Meilenstein 4 (auf `main`, Vorabversion 0.5.0-rc1; Stand 2026-10-02):**
+  GPX-Import + eigene Navigation (`GpxParser`, `TurnDetector`,
   `RouteNavigator`) und Höhenprofil als dritter BLE-Service
   (`ElevationProfile`, `ProfileFrameEncoder`, PROTOCOL.md "Höhenprofil-
-  Service"). Firmware-Seite dafür fehlt noch. JVM-Tests unter `app/src/test`.
+  Service"). Firmware-Seite: `ClimbProfile`/`ClimbMonitor` im
+  TRGB-BikeComputer-Repo (auf `main`). Seit 2026-10-04 geht das Profil immer
+  raus (rollendes Fenster der Strecke voraus, Tag `FLAGS`/`ROLLING`), ein
+  Anstieg darin wird angesagt -- noch in keinem Release. JVM-Tests unter
+  `app/src/test`.
   **Testfahrt** (`RoutePlayer`, `RouteProfileView`, Panel in `MainActivity`):
   spielt die GPX als Fake-GPS-Position samt simulierter Sensorwerte ab
   (Speed aus GPX-Zeit oder berechnet; Puls/Trittfrequenz aus der GPX oder
@@ -55,9 +63,19 @@ Stile `TB.*`, drei Schriften) -- keine Hex-Werte oder Fremdschriften im Layout.
   Simulationsmodus") -- die Simulation ist immer gekennzeichnet, ohne Flag ist
   alles echt (so bleibt Platz für später von TrailBridge weitergereichte
   echte Sensoren, noch nicht gebaut). Firmware-Seite: Parser +
-  `SimSensors::feedFromTrailBridge()` im TRGB-BikeComputer-Repo (Branch
-  `feature/ride-state-machine`, uncommittet), nur der BC_SIM-Build speist ein.
-  Auf echtem Gerät noch nicht getestet.
+  `SimSensors::feedFromTrailBridge()` im TRGB-BikeComputer-Repo (auf `main`),
+  nur der BC_SIM-Build speist ein. Bisher nur mit Testfahrt und
+  Simulator-Build getestet, noch keine echte Fahrt.
+
+- **Streckenübersicht (auf `main`, Stand 2026-10-02, nur App-Seite):** vierter
+  BLE-Service, nur lesbar (`RouteOverview`, `OverviewFrameEncoder`, PROTOCOL.md
+  "Streckenübersicht-Service"): Ziel, Wegpunkte (`wpt` der GPX, `GpxRoute.waypoints`)
+  und Anstiege voraus. Änderungssignal ist der Tag `OVERVIEW_REVISION` (0x0E) im
+  Nav-Frame; Entfernung und Zeit rechnet die Firmware aus dem Nav-Frame und den
+  Ankern der Übersicht. Die Restzeit kommt aus den Zeitstempeln der GPX, wenn sie
+  welche hat (`RouteTimes`), sonst aus der aktuellen Geschwindigkeit. Nur mit
+  Unit-Tests geprüft. Firmware-Seite fehlt -- Vorlage dafür in
+  [`FIRMWARE-OVERVIEW.md`](FIRMWARE-OVERVIEW.md).
 
 ## Verifizierte Fakten, die beim Weiterbauen wichtig sind
 

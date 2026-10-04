@@ -2,18 +2,26 @@
 
 # TrailBridge
 
-Android-Companion-App, die OsmAnds Turn-by-Turn-Navigation per BLE an den
-[TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32)
-weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
+Android-Companion-App zum
+[TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32): reicht
+Navigation aus OsmAnd oder einer GPX-Route, die GPS-Position und das Höhenprofil
+der Strecke voraus per BLE weiter -- als Ersatz für Komoots eingestellten
+BLE-Navigationsdienst.
+
+**Dokumentation mit Screenshots**, zusammen mit der des BikeComputers:
+<https://euphi.github.io/TRGB-BikeComputer/de/trailbridge/>
+([English](https://euphi.github.io/TRGB-BikeComputer/trailbridge/)).
+Was offen und geplant ist, steht in der [Roadmap](ROADMAP.md).
 
 ## Was TrailBridge macht
 
 - Liest OsmAnds Navigation per AIDL-API aus (Manöver, Straßennamen,
-  übernächstes Manöver, Restdistanz/-zeit) und funkt sie als kompaktes
+  übernächstes Manöver, Fahrspuren, Restdistanz/-zeit) und funkt sie als kompaktes
   TLV-Protokoll per BLE an den BikeComputer -- siehe [PROTOCOL.md](PROTOCOL.md)
   ([English](PROTOCOL.en.md)).
 - Zweiter, unabhängiger BLE-Service mit der rohen Handy-GPS-Position, direkt
-  vom GPS-Chip -- funktioniert auch ohne laufendes OsmAnd.
+  vom GPS-Chip -- funktioniert auch ohne laufendes OsmAnd und stellt die Uhr
+  des BikeComputers, wenn der kein WLAN hat.
 - **GPX-Routen:** GPX-Datei öffnen/teilen/laden, "Route starten" -- TrailBridge
   navigiert dann selbst (GPS-Position auf die Route gematcht, kein OsmAnd
   nötig) und sendet dieselben Nav-Frames. Abbiegehinweise kommen aus der
@@ -22,6 +30,13 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   einen eigenen BLE-Service raus (rollendes Fenster, auch flach und bergab);
   ein Anstieg darin wird 500 m vor dem Fuß mit seiner ganzen Ausdehnung
   angesagt, bis der Gipfel erreicht ist (siehe PROTOCOL.md, "Was ein Anstieg ist").
+- **Streckenübersicht:** Zu einer GPX-Route stellt TrailBridge über einen vierten
+  BLE-Service bereit, was noch voraus liegt: das Ziel, die Wegpunkte der Datei (`wpt`,
+  mit Namen) und die Anstiege (Nummer, Höhenmeter, Länge). Entfernung und Zeit dorthin
+  rechnet der BikeComputer aus dem Nav-Frame. Hat die GPX Zeitstempel (aufgezeichnete
+  Fahrt, oder BRouter mit `showtime` im Profil), kommt die Restzeit daraus statt aus
+  der momentanen Geschwindigkeit. Die Firmware wertet die Übersicht noch nicht aus --
+  siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md).
 - **Testfahrt:** Die geladene GPX-Route lässt sich zum Testen "abspielen"
   (Button "Testfahrt"): TrailBridge schickt dem BikeComputer statt der echten
   GPS-Position eine Fake-Position entlang der Strecke -- mit passender
@@ -35,18 +50,25 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   gesendet ist, das Höhenprofil der Strecke voraus (mit Fahrerposition, wie
   die Firmware sie berechnet). Der Bildschirm bleibt dabei an; Route bzw. Testfahrt
   vorher im Hauptscreen starten. Siehe [DESIGN.md](DESIGN.md).
-- **Status:** Läuft Ende-zu-Ende. Die Firmware
-  ([TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer)) spricht
-  das Protokoll inklusive GPS-Position bereits. Erste Beta-APK: siehe
-  [Releases](https://github.com/euphi/TrailBridge/releases).
+- **Moduswahl:** Der Hauptscreen zeigt nur, was der gewählte Modus braucht --
+  OsmAnd, GPS/GPX-Navigation, GPX-Simulation oder alles auf einem Screen.
 
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_app.png" height="480" alt="TrailBridge-App während einer OsmAnd-Navigation">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_bikecomputer.jpg" height="480" alt="TRGB-BikeComputer zeigt das weitergeleitete Abbiegemanöver">
 </p>
 
-Dokumentation mit Screenshots, deutsch und englisch:
-<https://euphi.github.io/TRGB-BikeComputer/trailbridge/>
+## Stand
+
+Navigation aus OsmAnd und die GPS-Position laufen Ende-zu-Ende (Version
+0.4.4); die OsmAnd-Navigation ist auf echten Fahrten erprobt. GPX-Navigation, Höhenprofil, Testfahrt, Navi-Modus
+und Moduswahl stecken in der Vorabversion 0.5.0-rc1 und sind bisher nur mit
+der Testfahrt und dem Simulator-Build der Firmware getestet. Das rollende
+Höhenprofil und die Streckenübersicht liegen auf `main` und sind noch in
+keinem Release. APKs: siehe
+[Releases](https://github.com/euphi/TrailBridge/releases). Offene Punkte und
+Pläne: [ROADMAP.md](ROADMAP.md); die Seite des BikeComputers dazu:
+[Roadmap](https://euphi.github.io/TRGB-BikeComputer/de/ROADMAP/).
 
 ## AIDL
 
@@ -58,7 +80,8 @@ und `app/src/main/java/net/osmand/aidlapi/`.
 ## Unit-Tests
 
 `gradle testDebugUnitTest` -- GPX-Parser, Abbiegeerkennung, Höhenprofil,
-Route-Matching und Frame-Encoder sind reines Java ohne Android-Abhängigkeit.
+Route-Matching, Streckenübersicht und Frame-Encoder sind reines Java ohne
+Android-Abhängigkeit.
 
 ## Bauen
 
