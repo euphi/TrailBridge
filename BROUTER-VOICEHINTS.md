@@ -25,7 +25,32 @@ Dieselbe Route mit `format=gpx&turnInstructionMode=3` direkt vom Server hat 113 
 Kopfzeile (44110 m, cost 103883, 2 h 14 m 52 s) ist identisch mit der der Fürth-Datei. Der Router
 kann es also; die Datei wurde nur ohne Hinweise exportiert.
 
-## Was zu tun ist
+## Warum das Verschieben eines Wegpunkts nicht hilft (aus dem Skript von bikerouter gelesen)
+
+- Die Route besteht aus **Teilstrecken je Wegpunkt-Paar**, jede mit eigener Anfrage (`queue` →
+  `getRoute(segment)`). Ein verschobener Wegpunkt rechnet nur die **zwei angrenzenden** Teilstrecken
+  neu; der Export hängt alle Teilstrecken aneinander (`_concatTotalTrack`).
+- Die Anfragen tragen **nur den Profilnamen** (bei eigenen Profilen den hochgeladenen
+  `custom_…`-Namen) und `profile:correctMisplacedViaPointsDistance` -- **kein**
+  `turnInstructionMode`. Der steckt nur im Profil selbst.
+- Das **Exportformat** dagegen liest `turnInstructionMode` aus dem **Profil-Text im Editor**
+  (`getProfileVar`): Steht dort 3, schreibt der Export `creator="OsmAndRouter"` mit `rte` --
+  auch wenn die Strecken mit dem Serverprofil (Modus 1) ohne Hinweise berechnet wurden. Das ist
+  genau die Fürth-Datei: Format „OsmAnd", Inhalt nur start/destination. Wahrscheinlichster Ablauf:
+  Wert im Editor auf 3 gestellt, aber nicht als eigenes Profil gespeichert/angewendet; beim
+  Verschieben blieb der Profilname der des Serverprofils.
+
+## Sicherer Weg: Datei direkt vom Server holen
+
+Nicht über die Oberfläche, sondern mit dem Link der Route (steht in der GPX unter `<link>`,
+`lonlats=…`) und ausdrücklichem Parameter -- liefert die komplette Datei mit allen Hinweisen
+(getestet für die Fürth-Route, 113 Hinweise, `creator="OsmAndRouter"`):
+
+```
+https://bikerouter.de/brouter-engine/brouter?lonlats=LON,LAT|LON,LAT|…&profile=Trekking-tracks&alternativeidx=0&format=gpx&turnInstructionMode=3&exportWaypoints=1
+```
+
+## Was zu tun ist (in der Oberfläche, ungeprüft)
 
 In bikerouter **vor dem Berechnen** (bzw. vor dem Export) beim Profil den Parameter
 `turnInstructionMode` auf „osmand-style" (3) stellen -- in den Profil-Einstellungen, die aus den
