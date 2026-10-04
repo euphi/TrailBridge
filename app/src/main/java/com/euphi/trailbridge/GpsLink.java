@@ -7,6 +7,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.core.content.ContextCompat;
@@ -117,7 +118,18 @@ public class GpsLink {
                 // so PositionFrameEncoder can compute a correct age even on a
                 // heartbeat resend, not just at the moment of the fix.
                 loc.getElapsedRealtimeNanos() / 1_000_000L,
-                // UTC of the fix; for GPS_PROVIDER this is the satellite time.
-                loc.getTime());
+                // UTC of the fix; for GPS_PROVIDER this is the satellite time -- but not
+                // before it agrees with the phone's own clock (GpsTime): the chip's first
+                // fixes after being switched on can carry a time that is hours off.
+                utcTimeMs(loc));
+    }
+
+    private static long utcTimeMs(Location loc) {
+        long ageMs = SystemClock.elapsedRealtime() - loc.getElapsedRealtimeNanos() / 1_000_000L;
+        long utc = GpsTime.plausibleUtcMs(loc.getTime(), ageMs, System.currentTimeMillis());
+        if (utc == 0 && loc.getTime() > 0) {
+            Log.w(TAG, "GPS time of the fix is off the phone clock, not sent as UTC_TIME_MS");
+        }
+        return utc;
     }
 }
