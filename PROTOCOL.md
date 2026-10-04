@@ -312,12 +312,33 @@ Genauigkeit, vor 320 ms:
 
 Dritter, unabhängiger BLE-Service, nur aktiv, solange TrailBridge eine
 importierte GPX-Route abspielt (siehe README) und die Route Höhendaten hat.
-Er ist **ereignisgetrieben**: TrailBridge sendet das Profil eines Anstiegs,
-sobald dessen Fuß höchstens 500 m voraus liegt -- **von der Position des
-Fahrers bis zum Gipfel**, in einem Frame -- und schickt `PROFILE_NONE`, wenn
-der Gipfel erreicht ist (und kein weiterer Anstieg direkt folgt), die Route
-endet oder der Fahrer die Route verlässt. **Kein Heartbeat** -- der zuletzt
-gesendete Frame bleibt per Read abrufbar und geht an neu abonnierende Geräte.
+Das Profil wird **immer** gesendet -- auch auf flacher Strecke und bergab, es ist
+immer von Interesse (Testfahrt 2026-10-04) --, als **rollendes Fenster der
+Strecke voraus**, von der Position des Fahrers an. Ein **Anstieg** darin wird
+nicht von der Firmware aus den Punkten erraten, sondern von TrailBridge
+**angesagt**, mit seiner ganzen Ausdehnung (Tags 0x07..0x0A, siehe unten): so
+endet er nie vor dem Gipfel, und Kategorie und Länge bleiben die vom Fuß,
+auch wenn der Fahrer schon mittendrin ist und der Fuß nicht mehr im Frame liegt.
+Das Flag `ROLLING` (Tag 0x06) kennzeichnet solche Frames.
+
+Ein neuer Frame geht raus,
+
+- zu Beginn und nachdem das Profil zurückgenommen wurde (Fahrer abseits der Route),
+- wenn sich der anzusagende Anstieg ändert: sein Fuß kommt auf höchstens 500 m
+  heran (das Fenster reicht dann vom Fahrer **bis zum Gipfel**), oder sein Gipfel
+  ist erreicht (das Fenster ohne Ansage, die Strecke hinter dem Gipfel),
+- wenn der Fahrer die Mitte eines Frames passiert hat, der nicht so weit reicht, wie er
+  sollte: das Fenster wandert weiter (Fenster ohne Anstieg: 200 Schritte à 25 m = 5 km;
+  ein Anstieg, der selbst auf dem gröbsten Raster nicht in einen Frame passt).
+
+Dazwischen kommt nichts. **`PROFILE_NONE` nur noch**, wenn die Route endet oder der
+Fahrer sie verlässt -- nicht mehr am Gipfel: dort fehlt einfach die Ansage im nächsten
+Frame, und die Firmware weiß, dass der Anstieg vorbei ist. **Kein Heartbeat** -- der
+zuletzt gesendete Frame bleibt per Read abrufbar und geht an neu abonnierende Geräte.
+
+Ältere TrailBridge-Versionen (ohne Flag) senden nur das Profil eines Anstiegs, von der
+Position bis zum Gipfel, und `PROFILE_NONE` am Gipfel; die Firmware findet den Anstieg
+dann selbst im Profil (siehe unten) und bleibt damit kompatibel.
 
 ### Was ein Anstieg ist
 
@@ -336,9 +357,10 @@ Beispiel Galibier: Von Süden (36 km über den Lautaret, mit Flachstücken) ist
 es ein Anstieg. Von Norden sind es zwei -- nach dem Col du Télégraphe geht es
 knapp 5 km und rund 165 m bergab nach Valloire.
 
-Die Firmware (`ClimbProfile.cpp`) findet Fuß und Gipfel im gesendeten Profil
-mit denselben Kriterien; das Profilende gilt ihr als Gipfel. Die Standardwerte
-beider Seiten müssen zusammenpassen.
+Nur für Frames **ohne** `ROLLING` (ältere TrailBridge-Versionen) findet die Firmware
+(`ClimbProfile.cpp`) Fuß und Gipfel im gesendeten Profil mit denselben Kriterien; das
+Profilende gilt ihr dann als Gipfel. Bei `ROLLING` gilt allein die Ansage; die
+Kriterien dieses Abschnitts wendet TrailBridge an.
 
 ### UUIDs
 
@@ -371,6 +393,19 @@ Byte 2..: TLV-Einträge (nur bei PROFILE_UPDATE)
 | 0x03 | BASE_ALT_DM | 2 | int16 LE, Höhe des ersten Punkts in Dezimetern |
 | 0x04 | DELTAS_DM | N | N × int8: Höhenänderung von Punkt k zu Punkt k+1, in Einheiten von `DELTA_SCALE_DM` dm |
 | 0x05 | DELTA_SCALE_DM | 1 | uint8, optional: Einheit der Deltas in Dezimetern. Fehlt der Tag, gilt 1 |
+| 0x06 | FLAGS | 1 | uint8, optional: Bit 0 `ROLLING` = rollendes Fenster der Strecke voraus; ein Anstieg ist nur der in 0x07..0x0A angesagte. Fehlt der Tag: Frame eines älteren TrailBridge (Profil bis zum Gipfel) |
+| 0x07 | CLIMB_FOOT_REMAINING_M | 4 | uint32 LE, Restdistanz der Route bis zum Ziel **am Fuß** des angesagten Anstiegs (kann hinter dem ersten Punkt liegen, also größer als `START_REMAINING_DISTANCE_M`) |
+| 0x08 | CLIMB_SUMMIT_REMAINING_M | 4 | uint32 LE, Restdistanz am **Gipfel** (kann hinter dem letzten Punkt liegen) |
+| 0x09 | CLIMB_FOOT_ALT_DM | 2 | int16 LE, Höhe des Fußes in Dezimetern |
+| 0x0A | CLIMB_SUMMIT_ALT_DM | 2 | int16 LE, Höhe des Gipfels in Dezimetern |
+
+Die vier Anstiegs-Tags kommen **alle zusammen oder gar nicht**; fehlen sie bei gesetztem
+`ROLLING`, liegt kein Anstieg an (weder unter dem Fahrer noch höchstens 500 m voraus).
+Angesagt wird der Anstieg, auf dem der Fahrer ist oder dessen Fuß höchstens 500 m voraus
+liegt, bis der Gipfel erreicht ist (auf eine halbe Rasterstufe genau). Wiederholte Frames
+desselben Anstiegs tragen **dieselben** Werte -- die Firmware erkennt ihn daran wieder und
+hält Kategorie und Anzeige stabil. Kategorie = Länge × mittlere Steigung des ganzen
+Anstiegs (Fuß bis Gipfel), nicht des Rests.
 
 Punkt k liegt bei `START_REMAINING_DISTANCE_M - k × STEP_M` Restdistanz,
 seine Höhe ist `BASE_ALT_DM + DELTA_SCALE_DM × Σ DELTAS_DM[0..k-1]` (in dm).
@@ -405,7 +440,7 @@ Reconnects. Liegt der Wert außerhalb `0..N × STEP_M`, ist das Profil
 veraltet bzw. noch nicht erreicht.
 
 **Länge und MTU:** N richtet sich nach der ausgehandelten MTU (Payload
-`ATT_MTU - 3`): `N = min(200, Payload - 20)`; unter 8 Punkten (200 m) sendet
+`ATT_MTU - 3`): `N = min(200, Payload - 20)` (bei `ROLLING` zusätzlich 23 Byte für Flag und Anstiegs-Tags: `Payload - 43`); unter 8 Punkten (200 m) sendet
 TrailBridge kein Profil. Die App nimmt das Minimum über alle verbundenen
 Geräte und geht ohne Angabe von den 256 aus, die die Firmware anfordert.
 
@@ -414,7 +449,7 @@ Unbekannte Tags überspringt die Firmware wie überall (Länge respektieren).
 ### Beispiel
 
 Profil ab 4200 m Restdistanz, Start auf 34,5 m, drei Schritte (+1,2 m,
-+1,3 m, −0,2 m):
++1,3 m, −0,2 m) -- ältere Form, ohne `ROLLING`:
 
 ```
 01 01                                              version=1, type=PROFILE_UPDATE
@@ -423,6 +458,24 @@ Profil ab 4200 m Restdistanz, Start auf 34,5 m, drei Schritte (+1,2 m,
 03 02 59 01                                        BASE_ALT_DM = 345
 04 03 0C 0D FE                                     DELTAS_DM = +12, +13, -2
 ```
+
+Rollendes Fenster mit angesagtem Anstieg: Fuß bei 5000 m Restdistanz auf 100,0 m,
+Gipfel bei 3500 m auf 136,0 m (die Punkte dazwischen wie oben):
+
+```
+01 01                                              version=1, type=PROFILE_UPDATE
+01 04 68 10 00 00                                  START_REMAINING_DISTANCE_M = 4200
+02 01 19                                           STEP_M = 25
+03 02 59 01                                        BASE_ALT_DM = 345
+06 01 01                                           FLAGS = ROLLING
+07 04 88 13 00 00                                  CLIMB_FOOT_REMAINING_M = 5000 (hinter dem ersten Punkt)
+08 04 AC 0D 00 00                                  CLIMB_SUMMIT_REMAINING_M = 3500
+09 02 E8 03                                        CLIMB_FOOT_ALT_DM = 1000
+0A 02 50 05                                        CLIMB_SUMMIT_ALT_DM = 1360
+04 03 0C 0D FE                                     DELTAS_DM = +12, +13, -2
+```
+
+Ohne Anstieg: derselbe Frame ohne die vier Tags 0x07..0x0A.
 
 Langer Anstieg auf grobem Raster: ab 36 000 m Restdistanz, Start auf 1200 m,
 200-m-Schritte, Deltas in 0,2 m (+12,0 m, +13,8 m, −0,6 m):

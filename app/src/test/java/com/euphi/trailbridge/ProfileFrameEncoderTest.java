@@ -33,6 +33,29 @@ public class ProfileFrameEncoderTest {
     }
 
     @Test
+    public void rollingFrameCarriesFlagAndTheClimbsWholeExtent() {
+        ProfileFrame.ClimbInfo climb = new ProfileFrame.ClimbInfo(5000, 3500, 1000, 1360);
+        ProfileFrame f = new ProfileFrame(4200, 25, 345, new byte[]{12, 13, -2}, 0).asRolling(climb);
+        byte[] b = ProfileFrameEncoder.encode(f);
+        assertArrayEquals(new byte[]{
+                1, 1,
+                1, 4, (byte) 0x68, 0x10, 0, 0,
+                2, 1, 25,
+                3, 2, 0x59, 0x01,
+                6, 1, 1,                                            // FLAGS: rolling
+                7, 4, (byte) 0x88, 0x13, 0, 0,                      // foot at 5000 m remaining
+                8, 4, (byte) 0xAC, 0x0D, 0, 0,                      // summit at 3500 m remaining
+                9, 2, (byte) 0xE8, 0x03,                            // foot altitude 100.0 m
+                10, 2, 0x50, 0x05,                                  // summit altitude 136.0 m
+                4, 3, 12, 13, -2}, b);
+        // no climb close: the flag alone
+        byte[] none = ProfileFrameEncoder.encode(new ProfileFrame(4200, 25, 345, new byte[]{12, 13, -2}, 0).asRolling(null));
+        assertArrayEquals(new byte[]{1, 1, 1, 4, (byte) 0x68, 0x10, 0, 0, 2, 1, 25, 3, 2, 0x59, 0x01, 6, 1, 1, 4, 3, 12, 13, -2}, none);
+        // the extra bytes a rolling frame with a climb needs are what ROLLING_EXTRA reserves
+        assertEquals(20 + ProfileFrameEncoder.ROLLING_EXTRA, b.length);
+    }
+
+    @Test
     public void helloAndNone() {
         assertArrayEquals(new byte[]{1, 0}, ProfileFrameEncoder.hello());
         assertArrayEquals(new byte[]{1, 2}, ProfileFrameEncoder.none());

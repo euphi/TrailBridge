@@ -76,29 +76,45 @@ public class RouteNavigatorTest {
     }
 
     @Test
-    public void profileIsSentAheadOfTheClimbUpToItsSummit() {
+    public void profileIsAlwaysSentAndTheClimbIsAnnouncedWithItsWholeExtent() {
         RouteNavigator n = new RouteNavigator(climbRoute());
-        assertNull(fixAlong(n, 300).profile);           // foot still 700 m away
-        RouteNavigator.Result r = fixAlong(n, 550);     // within APPROACH_M of the foot
+        // flat, foot still 700 m away: the road ahead is on the profile, no climb announced
+        RouteNavigator.Result r = fixAlong(n, 300);
         assertNotNull(r.profile);
+        assertTrue(r.profile.rolling);
+        assertNull(r.profile.climb);
         assertFalse(r.clearProfile);
+        assertNull(fixAlong(n, 320).profile);           // nothing new in between
+
+        r = fixAlong(n, 550);                           // within APPROACH_M of the foot
+        assertNotNull(r.profile);
+        assertNotNull(r.profile.climb);
         // anchored at the current position, ending at the summit
         assertEquals(2400 - 550, r.profile.startRemainingM, 15);
         assertEquals(1600, r.profile.startAlongM + r.profile.lengthM(), 60);
         assertEquals(136, r.profile.altitudeAtM(r.profile.lengthM()), 1);
         assertEquals(25, r.profile.stepM);
+        // the whole climb: foot at 1000, summit at 1600 along the route, 100 -> 136 m
+        assertEquals(2400 - 1000, r.profile.climb.footRemainingM, 80);    // the smoothing starts the foot a little early
+        assertEquals(2400 - 1600, r.profile.climb.summitRemainingM, 80);
+        assertEquals(1000, r.profile.climb.footAltDm, 10);
+        assertEquals(1360, r.profile.climb.summitAltDm, 10);
 
-        // one frame for the whole climb: nothing more until the summit
-        RouteNavigator.Result x = null;
+        // one frame for the whole climb: nothing more until the summit -- no PROFILE_NONE
+        // (clearProfile) on the way, and the announcement stays what it was
         double d = 560;
+        RouteNavigator.Result x = null;
         for (; d < 2400; d += 20) {
             x = fixAlong(n, d);
-            assertNull(x.profile);
-            if (x.clearProfile) break;
+            assertFalse(x.clearProfile);
+            if (x.profile != null) break;
         }
-        assertTrue(x.clearProfile);
+        // at the summit the road beyond goes out, and it announces no climb any more
+        assertNotNull(x.profile);
+        assertNull(x.profile.climb);
+        assertTrue(x.profile.rolling);
         assertEquals(1600, d, 80);
-        // GPS jitter back over the summit does not bring the profile back
+        // GPS jitter back over the summit does not announce it again
         x = fixAlong(n, d - 40);
         assertNull(x.profile);
         assertFalse(x.clearProfile);
@@ -109,25 +125,54 @@ public class RouteNavigatorTest {
         RouteNavigator n = new RouteNavigator(climbRoute());
         RouteNavigator.Result r = fixAlong(n, 1250);
         assertNotNull(r.profile);
+        assertNotNull(r.profile.climb);
         assertEquals(1600, r.profile.startAlongM + r.profile.lengthM(), 60);
-        // off the route: profile taken back; back on it: sent again
+        // the foot is behind the frame's first point: its remaining distance is still announced
+        assertTrue(r.profile.climb.footRemainingM > r.profile.startRemainingM);
+        // off the route: profile taken back; back on it: sent again, the same climb
         assertTrue(fixAt(n, 150, 900).clearProfile);
-        assertNotNull(fixAlong(n, 1300).profile);
+        RouteNavigator.Result back = fixAlong(n, 1300);
+        assertNotNull(back.profile);
+        assertEquals(r.profile.climb.footRemainingM, back.profile.climb.footRemainingM);
+        assertEquals(r.profile.climb.summitRemainingM, back.profile.climb.summitRemainingM);
+    }
+
+    @Test
+    public void flatRoadStillGetsARollingWindow() {
+        GpxRoute flat = Routes.polyline(new double[][]{{0, 0}, {0, 12000}}, d -> 100 + 5 * Math.sin(d / 500));
+        RouteNavigator n = new RouteNavigator(flat);
+        RouteNavigator.Result first = n.onFix(Routes.lat(100), Routes.lon(0), 4, 253);
+        assertNotNull(first.profile);
+        assertNull(first.profile.climb);
+        assertEquals(5000, first.profile.lengthM(), 30);       // 200 steps of 25 m
+        double endM = first.profile.startAlongM + first.profile.lengthM();
+        boolean resent = false;
+        for (double s = 150; s < 11000 && !resent; s += 50) {
+            RouteNavigator.Result x = n.onFix(Routes.lat(s), Routes.lon(0), 4, 253);
+            assertFalse(x.clearProfile);
+            if (x.profile != null) {
+                resent = true;
+                assertTrue(s > first.profile.startAlongM + first.profile.lengthM() / 2.0 - 1);     // not before the middle
+                assertTrue(s < endM);                                                            // before the display runs dry
+                assertNull(x.profile.climb);
+            }
+        }
+        assertTrue(resent);
     }
 
     @Test
     public void nextStretchIsSentWhenTheRiderPassesTheMiddle() {
         GpxRoute r = Routes.polyline(new double[][]{{0, 0}, {0, 30000}}, d -> d * 0.06);
         RouteNavigator n = new RouteNavigator(r);
-        // 60 byte payload -> 40 steps, 10 km per frame even at 250 m: the 30 km need several
-        RouteNavigator.Result first = n.onFix(Routes.lat(100), Routes.lon(0), 4, 60);
+        // 83 byte payload (60 for the steps, 23 for a rolling frame's flag and climb tags) -> 40 steps, 10 km per frame even at 250 m: the 30 km need several
+        RouteNavigator.Result first = n.onFix(Routes.lat(100), Routes.lon(0), 4, 83);
         assertNotNull(first.profile);
         assertEquals(250, first.profile.stepM);
         int sentM = first.profile.lengthM();
         assertEquals(10000, sentM);
         boolean resent = false;
         for (double s = 100; s < 30000 && !resent; s += 50) {
-            RouteNavigator.Result x = n.onFix(Routes.lat(s), Routes.lon(0), 4, 60);
+            RouteNavigator.Result x = n.onFix(Routes.lat(s), Routes.lon(0), 4, 83);
             if (x.profile != null) {
                 resent = true;
                 assertTrue(s > sentM / 2.0 - 1);

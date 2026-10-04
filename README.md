@@ -18,9 +18,10 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   navigiert dann selbst (GPS-Position auf die Route gematcht, kein OsmAnd
   nötig) und sendet dieselben Nav-Frames. Abbiegehinweise kommen aus der
   Datei (`rtept`, OsmAnd-Routensegmente), sonst aus der Track-Geometrie.
-  Hat die Route Höhendaten, geht kurz vor jedem Anstieg (500 m vor dem Fuß)
-  sein Höhenprofil bis zum Gipfel über einen eigenen BLE-Service raus -- auch
-  bei langen Pässen in einem Stück (siehe PROTOCOL.md, "Was ein Anstieg ist").
+  Hat die Route Höhendaten, geht das Höhenprofil der Strecke voraus immer über
+  einen eigenen BLE-Service raus (rollendes Fenster, auch flach und bergab);
+  ein Anstieg darin wird 500 m vor dem Fuß mit seiner ganzen Ausdehnung
+  angesagt, bis der Gipfel erreicht ist (siehe PROTOCOL.md, "Was ein Anstieg ist").
 - **Testfahrt:** Die geladene GPX-Route lässt sich zum Testen "abspielen"
   (Button "Testfahrt"): TrailBridge schickt dem BikeComputer statt der echten
   GPS-Position eine Fake-Position entlang der Strecke -- mit passender
@@ -31,7 +32,7 @@ weiterreicht -- als Ersatz für Komoots eingestellten BLE-Navigationsdienst.
   PROTOCOL.md, "Sensorwerte und Simulationsmodus".
 - **Navi-Modus:** Button "Navi-Modus" im Hauptscreen -- ein reduzierter Screen
   für unterwegs: nur Navigation, Position und, solange eines an den BikeComputer
-  gesendet ist, das Höhenprofil der Steigung voraus (mit Fahrerposition, wie
+  gesendet ist, das Höhenprofil der Strecke voraus (mit Fahrerposition, wie
   die Firmware sie berechnet). Der Bildschirm bleibt dabei an; Route bzw. Testfahrt
   vorher im Hauptscreen starten. Siehe [DESIGN.md](DESIGN.md).
 - **Status:** Läuft Ende-zu-Ende. Die Firmware

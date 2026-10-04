@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * Follows an imported {@link GpxRoute} with GPS fixes: matches the position
- * onto the route, and produces the NavState for the BikeComputer plus -- from
- * shortly before a climb to its summit -- the elevation profile to send.
+ * onto the route, and produces the NavState for the BikeComputer plus the elevation
+ * profile of the road ahead to send (always; a climb in it is announced).
  *
  * No Android dependencies; feed it fixes, act on the {@link Result}. Not
  * thread-safe (TrailBridgeService calls it from the main thread only).
@@ -115,30 +115,56 @@ public final class RouteNavigator {
 
         NavState nav = navState();
         ProfileFrame send = null;
-        boolean clear = false;
         if (elevation != null) {
-            int maxSteps = ProfileFrameEncoder.maxSteps(maxPayload);
-            int k = climbAhead();
-            if (k >= 0 && maxSteps > 0) {
-                ElevationProfile.Climb climb = climbs.get(k);
-                if (k != sentClimb) {
-                    send = cut(climb, k, maxSteps, 0);
-                } else if (sentProfile.startAlongM + sentProfile.lengthM() < climb.summitM - SUMMIT_REACHED_M
-                        && progressM > sentProfile.startAlongM + sentProfile.lengthM() / 2.0) {
-                    // The climb is longer than one frame holds even on the coarsest raster, and the
-                    // rider is past the middle of what the display has: send the next stretch,
-                    // on the same raster.
-                    send = cut(climb, k, maxSteps, sentProfile.stepM);
-                }
-            }
-            if (send == null && sentProfile != null && k != sentClimb) {
-                // Summit reached and no further climb close, or one too short to draw.
-                clear = true;
-                sentProfile = null;
-                sentClimb = -1;
-            }
+            // Rolling frames carry the flag and the climb tags too: they take their share of the payload
+            int maxSteps = ProfileFrameEncoder.maxSteps(maxPayload - ProfileFrameEncoder.ROLLING_EXTRA);
+            if (maxSteps > 0) send = nextProfile(maxSteps);
         }
-        return new Result(nav, send, clear, false);
+        return new Result(nav, send, false, false);
+    }
+
+    /**
+     * The profile is sent all the time (flat, downhill and uphill alike -- it is always of
+     * interest), as a window of the road ahead; only a climb it contains is announced as such,
+     * with its whole extent. A new frame goes out
+     * <ul>
+     * <li>at the start, and after the profile was taken back (off the route),</li>
+     * <li>when the climb to announce changes: its foot comes within APPROACH_M, or its summit is
+     *     passed -- the window then runs from the rider to the summit,</li>
+     * <li>when the rider has passed the middle of a frame that does not reach as far as it
+     *     should (the window moves on; a climb longer than one frame even on the coarsest raster).</li>
+     * </ul>
+     * Nothing is sent in between, and nothing is taken back at a summit: the road beyond it is
+     * on the profile, and the BikeComputer sees by the missing announcement that the climb is
+     * over.
+     *
+     * @return null if there is nothing new (or fewer than MIN_STEPS samples left to the route's end)
+     */
+    private ProfileFrame nextProfile(int maxSteps) {
+        int k = climbAhead();
+        double toM = k >= 0 ? climbs.get(k).summitM
+                : Math.min(route.totalM, progressM + maxSteps * (double) ElevationProfile.STEP_M);
+        boolean fresh = sentProfile == null || k != sentClimb;
+        if (!fresh) {
+            double sentEndM = sentProfile.startAlongM + sentProfile.lengthM();
+            boolean endShort = sentEndM < toM - SUMMIT_REACHED_M;
+            boolean pastMiddle = progressM > sentProfile.startAlongM + sentProfile.lengthM() / 2.0;
+            if (!(endShort && pastMiddle)) return null;
+        }
+        // Another stretch of the same climb keeps the raster, so the BikeComputer can join the two
+        int stepM = (!fresh && k >= 0) ? sentProfile.stepM : 0;
+        ProfileFrame f = elevation.slice(progressM, toM, maxSteps, ProfileFrameEncoder.MIN_STEPS, stepM);
+        if (f == null) return null;
+        sentClimb = k;
+        ProfileFrame.ClimbInfo info = null;
+        if (k >= 0) {
+            ElevationProfile.Climb c = climbs.get(k);
+            info = new ProfileFrame.ClimbInfo(
+                    (int) Math.round(route.totalM - c.footM), (int) Math.round(route.totalM - c.summitM),
+                    Math.round(c.footAltM * 10f), Math.round(c.summitAltM * 10f));
+        }
+        sentProfile = f.asRolling(info);
+        return sentProfile;
     }
 
     /**
@@ -167,16 +193,6 @@ public final class RouteNavigator {
             }
         }
         return -1;
-    }
-
-    /** The profile from the rider to the climb's summit. */
-    private ProfileFrame cut(ElevationProfile.Climb climb, int index, int maxSteps, int stepM) {
-        ProfileFrame f = elevation.slice(progressM, climb.summitM, maxSteps, ProfileFrameEncoder.MIN_STEPS, stepM);
-        if (f != null) {
-            sentProfile = f;
-            sentClimb = index;
-        }
-        return f;
     }
 
     // ---- matching ----
