@@ -30,6 +30,7 @@ public final class NavFrameEncoder {
     public static final int TAG_NEXT_LANES = 0x0B;
     public static final int TAG_LANE_DISTANCE_M = 0x0C;
     public static final int TAG_NEXT_LANE_DISTANCE_M = 0x0D;
+    public static final int TAG_OVERVIEW_REVISION = 0x0E;
 
     /** Comfortably under the 253 usable bytes of a 256-byte ATT_MTU, and
      *  still short if MTU negotiation hasn't finished when we first send. */
@@ -75,6 +76,9 @@ public final class NavFrameEncoder {
 
         writeU32(out, TAG_REMAINING_DISTANCE_M, s.remainingDistanceM);
         writeU32(out, TAG_REMAINING_TIME_S, s.remainingTimeS);
+        if (s.overviewRevision != 0) {
+            writeU8(out, TAG_OVERVIEW_REVISION, s.overviewRevision);
+        }
 
         return out.toByteArray();
     }
@@ -94,17 +98,23 @@ public final class NavFrameEncoder {
         out.write((value >>> 24) & 0xFF);
     }
 
-    private static void writeString(ByteArrayOutputStream out, int tag, String value) {
+    /** The string as UTF-8, cut to at most maxBytes. */
+    static byte[] utf8(String value, int maxBytes) {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length > MAX_STRING_BYTES) {
+        if (bytes.length > maxBytes) {
             // Don't cut a multi-byte UTF-8 sequence in half: back up until we
             // land on a byte that isn't a continuation byte (10xxxxxx).
-            int cut = MAX_STRING_BYTES;
+            int cut = maxBytes;
             while (cut > 0 && (bytes[cut] & 0xC0) == 0x80) {
                 cut--;
             }
             bytes = Arrays.copyOf(bytes, cut);
         }
+        return bytes;
+    }
+
+    private static void writeString(ByteArrayOutputStream out, int tag, String value) {
+        byte[] bytes = utf8(value, MAX_STRING_BYTES);
         out.write(tag);
         out.write(bytes.length);
         out.write(bytes, 0, bytes.length);

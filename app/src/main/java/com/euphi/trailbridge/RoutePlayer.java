@@ -329,6 +329,11 @@ public final class RoutePlayer {
     }
 
     private double timeForDistance(double d) {
+        return timeForDistance(dAt, d);
+    }
+
+    /** @param dAt route distance at every whole second of the ride */
+    static double timeForDistance(double[] dAt, double d) {
         // first second at which the rider has got at least this far
         int lo = 0;
         int hi = dAt.length - 1;
@@ -345,7 +350,7 @@ public final class RoutePlayer {
      * Distance for each whole second from the file's time stamps, or null if it
      * has too few to say anything.
      */
-    private static double[] fromTimestamps(GpxRoute r) {
+    static double[] fromTimestamps(GpxRoute r) {
         if (!r.hasTimes()) return null;
         List<double[]> pts = new ArrayList<>();   // {seconds, distance}, strictly increasing in seconds
         long t0 = 0;
@@ -437,7 +442,7 @@ public final class RoutePlayer {
     }
 
     /** Cuts every standstill longer than MAX_PAUSE_S down to that; the ride still ends on the route's end. */
-    private static double[] compressPauses(double[] d, double totalM) {
+    static double[] compressPauses(double[] d, double totalM) {
         double[] out = new double[d.length];
         int n = 0;
         int still = 0;

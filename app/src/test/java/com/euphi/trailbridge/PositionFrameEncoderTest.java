@@ -95,4 +95,15 @@ public class PositionFrameEncoderTest {
         assertArrayEquals(new byte[]{1, 2}, PositionFrameEncoder.encode(PositionState.NONE));
         assertEquals(2, PositionFrameEncoder.encode(PositionState.NONE, 5).length);
     }
+
+    @Test
+    public void heightAboveSeaLevelOfARealFixComesLast() {
+        byte[] plain = PositionFrameEncoder.encode(fix(false, false, 0), 1320);
+        // 359.4 m = 3594 dm = 0x0E0A
+        PositionState real = new PositionState(true, 525163000, 133777000, true, 34, true, 420, true, 8750, true, 50,
+                1000, 0L, false, 0, false, 0, false, 0, false, 0, 0, true, 3594);
+        byte[] b = PositionFrameEncoder.encode(real, 1320);
+        assertArrayEquals(plain, Arrays.copyOf(b, plain.length));
+        assertArrayEquals(new byte[]{14, 4, 0x0A, 0x0E, 0, 0}, Arrays.copyOfRange(b, plain.length, b.length));
+    }
 }

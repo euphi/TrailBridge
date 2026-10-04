@@ -48,6 +48,12 @@ public final class PositionState {
     public final boolean hasBaroHeight;
     public final int baroHeightDm;
 
+    /** Height above sea level (geoid, i.e. NHN) in decimetres of a real fix -- unlike altitudeM, which is
+     *  above the ellipsoid. Needs Android 14 (Location.getMslAltitudeMeters()); the BikeComputer
+     *  calibrates its barometer against it. Never set for made-up positions. */
+    public final boolean hasMslAltitude;
+    public final int mslAltitudeDm;
+
     /** Pedalling power in watts (0 = coasting), only simulated today. */
     public final boolean hasPower;
     public final int powerW;
@@ -85,6 +91,22 @@ public final class PositionState {
                           boolean hasCadence, int cadenceRpm,
                           boolean hasBaroHeight, int baroHeightDm, boolean hasPower, int powerW,
                           int simFlags) {
+        this(hasFix, latitudeE7, longitudeE7, hasAltitude, altitudeM, hasSpeed, speedCms,
+                hasBearing, bearingDegX100, hasAccuracy, accuracyMx10,
+                fixElapsedRealtimeMs, fixUtcTimeMs, hasHeartRate, heartRateBpm, hasCadence, cadenceRpm,
+                hasBaroHeight, baroHeightDm, hasPower, powerW, simFlags, false, 0);
+    }
+
+    public PositionState(boolean hasFix, int latitudeE7, int longitudeE7,
+                          boolean hasAltitude, int altitudeM,
+                          boolean hasSpeed, int speedCms,
+                          boolean hasBearing, int bearingDegX100,
+                          boolean hasAccuracy, int accuracyMx10,
+                          long fixElapsedRealtimeMs, long fixUtcTimeMs,
+                          boolean hasHeartRate, int heartRateBpm,
+                          boolean hasCadence, int cadenceRpm,
+                          boolean hasBaroHeight, int baroHeightDm, boolean hasPower, int powerW,
+                          int simFlags, boolean hasMslAltitude, int mslAltitudeDm) {
         this.hasFix = hasFix;
         this.latitudeE7 = latitudeE7;
         this.longitudeE7 = longitudeE7;
@@ -107,6 +129,8 @@ public final class PositionState {
         this.hasPower = hasPower;
         this.powerW = powerW;
         this.simFlags = simFlags;
+        this.hasMslAltitude = hasMslAltitude;
+        this.mslAltitudeDm = mslAltitudeDm;
     }
 
     @Override
@@ -115,6 +139,7 @@ public final class PositionState {
         StringBuilder s = new StringBuilder("PositionState{")
                 .append(latitudeE7 / 1e7).append(", ").append(longitudeE7 / 1e7);
         if (hasAltitude) s.append(", ").append(altitudeM).append("m");
+        if (hasMslAltitude) s.append(", NHN ").append(mslAltitudeDm / 10.0).append("m");
         if (hasSpeed) s.append(", ").append(speedCms / 100.0).append("m/s");
         if (hasBearing) s.append(", ").append(bearingDegX100 / 100.0).append("°");
         if (hasAccuracy) s.append(", ±").append(accuracyMx10 / 10.0).append("m");

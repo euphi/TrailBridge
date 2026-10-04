@@ -6,7 +6,8 @@ import java.util.List;
 /**
  * Follows an imported {@link GpxRoute} with GPS fixes: matches the position
  * onto the route, and produces the NavState for the BikeComputer plus the elevation
- * profile of the road ahead to send (always; a climb in it is announced).
+ * profile of the road ahead to send (always; a climb in it is announced), and
+ * keeps the overview of what lies ahead.
  *
  * No Android dependencies; feed it fixes, act on the {@link Result}. Not
  * thread-safe (TrailBridgeService calls it from the main thread only).
@@ -23,9 +24,9 @@ public final class RouteNavigator {
     /** A climb's profile goes out once the rider is this close to its foot. */
     static final double APPROACH_M = 500;
     /** The summit counts as reached at its raster sample (half a step before it). */
-    private static final double SUMMIT_REACHED_M = ElevationProfile.STEP_M / 2.0;
+    static final double SUMMIT_REACHED_M = ElevationProfile.STEP_M / 2.0;
     /** A climb just finished only counts again this far below its summit (GPS jitter at the top). */
-    private static final double REENTER_M = 100;
+    static final double REENTER_M = 100;
 
     private static final double DEFAULT_SPEED_MS = 15 / 3.6;
     private static final double MIN_SPEED_MS = 1.5;
@@ -38,17 +39,22 @@ public final class RouteNavigator {
         /** True: tell the BikeComputer there is no (more) profile. */
         public final boolean clearProfile;
         public final boolean offRoute;
+        /** True: what lies ahead changed (or is new), publish {@link #overview()} again. */
+        public final boolean overviewChanged;
 
-        Result(NavState nav, ProfileFrame profile, boolean clearProfile, boolean offRoute) {
+        Result(NavState nav, ProfileFrame profile, boolean clearProfile, boolean offRoute,
+               boolean overviewChanged) {
             this.nav = nav;
             this.profile = profile;
             this.clearProfile = clearProfile;
             this.offRoute = offRoute;
+            this.overviewChanged = overviewChanged;
         }
     }
 
     private final GpxRoute route;
     private final ElevationProfile elevation;   // null without elevation data
+    private final RouteTimes times;             // null if the file has no time stamps
 
     private double progressM = 0;
     private boolean matched = false;
@@ -59,10 +65,15 @@ public final class RouteNavigator {
     private int sentClimb = -1;     // index of the climb sentProfile belongs to
     private int passedClimb = -1;   // the climb whose summit the rider reached last
 
+    private final RouteOverview overview;
+    private boolean overviewDirty = true;   // nothing published yet
+
     public RouteNavigator(GpxRoute route) {
         this.route = route;
         this.elevation = ElevationProfile.of(route);
         this.climbs = elevation == null ? Collections.<ElevationProfile.Climb>emptyList() : elevation.climbs();
+        this.times = RouteTimes.of(route);
+        this.overview = new RouteOverview(route, climbs, times);
     }
 
     public GpxRoute route() {
@@ -71,6 +82,11 @@ public final class RouteNavigator {
 
     public double progressM() {
         return progressM;
+    }
+
+    /** What still lies ahead, as of the last fix. */
+    public RouteOverview overview() {
+        return overview;
     }
 
     /**
@@ -86,6 +102,7 @@ public final class RouteNavigator {
         sentProfile = null;
         sentClimb = -1;
         passedClimb = -1;
+        overviewDirty |= overview.update(this.progressM);
     }
 
     /**
@@ -103,14 +120,17 @@ public final class RouteNavigator {
         if (!offRoute) {
             progressM = match[0];
             matched = true;
+            overviewDirty |= overview.update(progressM);
         }
+        boolean overviewChanged = overviewDirty;
+        overviewDirty = false;
         if (offRoute) {
             // Progress stays where it was; the profile of the last known
             // stretch stays meaningless while we're elsewhere -> clear it.
             boolean clear = sentProfile != null;
             sentProfile = null;
             sentClimb = -1;
-            return new Result(offRouteState((int) Math.round(match[1])), null, clear, true);
+            return new Result(offRouteState((int) Math.round(match[1])), null, clear, true, overviewChanged);
         }
 
         NavState nav = navState();
@@ -120,7 +140,7 @@ public final class RouteNavigator {
             int maxSteps = ProfileFrameEncoder.maxSteps(maxPayload - ProfileFrameEncoder.ROLLING_EXTRA);
             if (maxSteps > 0) send = nextProfile(maxSteps);
         }
-        return new Result(nav, send, false, false);
+        return new Result(nav, send, false, false, overviewChanged);
     }
 
     /**
@@ -252,7 +272,7 @@ public final class RouteNavigator {
         GpxRoute.Step after = k + 1 < steps.size() ? steps.get(k + 1) : null;
 
         int remaining = (int) Math.round(Math.max(0, route.totalM - progressM));
-        int timeS = (int) Math.round(remaining / Math.max(speedMs, MIN_SPEED_MS));
+        int timeS = remainingTimeS(remaining);
         return new NavState(true,
                 next.maneuver, (int) Math.round(Math.max(0, next.distM - progressM)),
                 next.roundaboutExit, next.name, Collections.<Lane>emptyList(), 0,
@@ -266,7 +286,18 @@ public final class RouteNavigator {
         int remaining = (int) Math.round(Math.max(0, route.totalM - progressM));
         return new NavState(true, Maneuver.UNKNOWN, distToRouteM, 0, "Abseits der Route",
                 Collections.<Lane>emptyList(), 0, Maneuver.NONE, 0, "",
-                Collections.<Lane>emptyList(), 0, remaining,
-                (int) Math.round(remaining / Math.max(speedMs, MIN_SPEED_MS)));
+                Collections.<Lane>emptyList(), 0, remaining, remainingTimeS(remaining));
+    }
+
+    /**
+     * Time to the destination: what the file's time stamps say for the rest of
+     * the route, if it has them (they know the climbs ahead); else the rest at
+     * the current speed.
+     */
+    private int remainingTimeS(int remainingM) {
+        if (times != null) {
+            return (int) Math.round(times.remainingS(progressM));
+        }
+        return (int) Math.round(remainingM / Math.max(speedMs, MIN_SPEED_MS));
     }
 }

@@ -185,6 +185,63 @@ public class RouteNavigatorTest {
     }
 
     @Test
+    public void overviewChangesWhenSomethingIsPassed() {
+        GpxRoute r = Routes.withWaypoints(climbRoute(),
+                new GpxRoute.Waypoint(800, "Brunnen"), new GpxRoute.Waypoint(2000, ""));
+        RouteNavigator n = new RouteNavigator(r);
+        assertTrue(fixAlong(n, 100).overviewChanged);              // the first fix publishes it
+        assertEquals(2, n.overview().waypointsAhead().size());
+        assertEquals(1, n.overview().climbsAhead().size());
+        assertFalse(fixAlong(n, 400).overviewChanged);
+
+        assertTrue(fixAlong(n, 810).overviewChanged);              // waypoint reached
+        assertEquals("Wegpunkt 2", n.overview().waypointsAhead().get(0).name);
+        assertFalse(fixAlong(n, 790).overviewChanged);             // GPS jitter does not bring it back
+
+        boolean changed = false;                                   // riding over the summit at 1600 m
+        for (double d = 1000; d <= 1700; d += 50) changed |= fixAlong(n, d).overviewChanged;
+        assertTrue(changed);
+        assertEquals(0, n.overview().climbsAhead().size());
+        assertEquals(1, n.overview().climbTotal());
+
+        assertFalse(fixAt(n, 400, 900).overviewChanged);           // off the route: it stays as it is
+        n.seekTo(300);                                             // a jump back: everything is ahead again
+        assertTrue(fixAlong(n, 300).overviewChanged);
+        assertEquals(2, n.overview().waypointsAhead().size());
+        assertEquals(1, n.overview().climbsAhead().size());
+    }
+
+    @Test
+    public void remainingTimeComesFromTheFilesTimeStamps() {
+        // 5 m/s on the flat, 2 m/s on the climb (1000..1600 m): 200 + 300 + 160 s
+        GpxRoute r = Routes.withTimes(
+                Routes.withWaypoints(climbRoute(), new GpxRoute.Waypoint(1600, "Gipfel")),
+                d -> d < 1000 ? d / 5 : d < 1600 ? 200 + (d - 1000) / 2 : 500 + (d - 1600) / 5);
+        RouteNavigator n = new RouteNavigator(r);
+        RouteNavigator.Result x = fixAlong(n, 500);                // fixAt reports 4 m/s; it does not matter
+        assertEquals(100 + 300 + 160, x.nav.remainingTimeS, 3);
+        assertEquals(160, n.overview().waypointsAhead().get(0).remainingTimeAtS, 2);
+        assertEquals(0, n.overview().destination().remainingTimeAtS);
+        assertEquals(160 - 80, fixAlong(n, 2000).nav.remainingTimeS, 3);
+    }
+
+    @Test
+    public void withoutTimeStampsTheRemainingTimeFollowsTheSpeed() {
+        RouteNavigator n = new RouteNavigator(Routes.withWaypoints(climbRoute(), new GpxRoute.Waypoint(1600, "")));
+        assertEquals(1900 / (0.8 * 15 / 3.6 + 0.2 * 4), fixAlong(n, 500).nav.remainingTimeS, 3);
+        assertEquals(-1, n.overview().waypointsAhead().get(0).remainingTimeAtS);
+    }
+
+    @Test
+    public void startingOffTheRoutePublishesTheOverviewToo() {
+        RouteNavigator n = new RouteNavigator(lRoute());
+        RouteNavigator.Result r = fixAt(n, 300, 100);
+        assertTrue(r.offRoute);
+        assertTrue(r.overviewChanged);
+        assertFalse(fixAt(n, 300, 110).overviewChanged);
+    }
+
+    @Test
     public void smallMtuSendsNoProfile() {
         RouteNavigator n = new RouteNavigator(Routes.polyline(new double[][]{{0, 0}, {0, 2000}}, d -> d * 0.06));
         RouteNavigator.Result r = n.onFix(Routes.lat(100), Routes.lon(0), 4, 20);

@@ -32,6 +32,9 @@ public final class NavState {
     public final int remainingDistanceM;     // to destination
     public final int remainingTimeS;         // to destination
 
+    /** Revision of the route overview these distances belong to, 0 = there is none (PROTOCOL.md "Streckenübersicht-Service"). */
+    public final int overviewRevision;
+
     public static final NavState NONE = new NavState(
             false, Maneuver.NONE, 0, 0, "", Collections.emptyList(), 0,
             Maneuver.NONE, 0, "", Collections.emptyList(), 0, 0, 0);
@@ -41,6 +44,16 @@ public final class NavState {
                      int nextManeuver, int nextManeuverDistanceM,
                      String nextStreetName, List<Lane> nextLanes, int nextLaneDistanceM,
                      int remainingDistanceM, int remainingTimeS) {
+        this(navigating, maneuver, maneuverDistanceM, roundaboutExit, streetName, lanes, laneDistanceM,
+                nextManeuver, nextManeuverDistanceM, nextStreetName, nextLanes, nextLaneDistanceM,
+                remainingDistanceM, remainingTimeS, 0);
+    }
+
+    private NavState(boolean navigating, int maneuver, int maneuverDistanceM, int roundaboutExit,
+                     String streetName, List<Lane> lanes, int laneDistanceM,
+                     int nextManeuver, int nextManeuverDistanceM,
+                     String nextStreetName, List<Lane> nextLanes, int nextLaneDistanceM,
+                     int remainingDistanceM, int remainingTimeS, int overviewRevision) {
         this.navigating = navigating;
         this.maneuver = maneuver;
         this.maneuverDistanceM = maneuverDistanceM;
@@ -55,6 +68,14 @@ public final class NavState {
         this.nextLaneDistanceM = nextLaneDistanceM;
         this.remainingDistanceM = remainingDistanceM;
         this.remainingTimeS = remainingTimeS;
+        this.overviewRevision = overviewRevision;
+    }
+
+    /** The same snapshot, marked as belonging to this revision of the route overview. */
+    public NavState withOverviewRevision(int revision) {
+        return new NavState(navigating, maneuver, maneuverDistanceM, roundaboutExit, streetName, lanes,
+                laneDistanceM, nextManeuver, nextManeuverDistanceM, nextStreetName, nextLanes,
+                nextLaneDistanceM, remainingDistanceM, remainingTimeS, revision);
     }
 
     /**
@@ -110,13 +131,14 @@ public final class NavState {
                 && nextManeuverDistanceM == n.nextManeuverDistanceM
                 && nextStreetName.equals(n.nextStreetName) && nextLanes.equals(n.nextLanes)
                 && nextLaneDistanceM == n.nextLaneDistanceM
-                && remainingDistanceM == n.remainingDistanceM && remainingTimeS == n.remainingTimeS;
+                && remainingDistanceM == n.remainingDistanceM && remainingTimeS == n.remainingTimeS
+                && overviewRevision == n.overviewRevision;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(navigating, maneuver, maneuverDistanceM, roundaboutExit, streetName,
                 lanes, laneDistanceM, nextManeuver, nextManeuverDistanceM, nextStreetName, nextLanes,
-                nextLaneDistanceM, remainingDistanceM, remainingTimeS);
+                nextLaneDistanceM, remainingDistanceM, remainingTimeS, overviewRevision);
     }
 }

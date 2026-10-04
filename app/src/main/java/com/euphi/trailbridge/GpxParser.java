@@ -30,8 +30,13 @@ import javax.xml.parsers.SAXParserFactory;
  *     free text from type/sym/desc/name (Maneuver.fromText).
  *  3. Nothing in the file -> TurnDetector derives them from the geometry.
  *
- * Recorded tracks may also carry per-point time and, in the
- * TrackPointExtension, heart rate, cadence and power (used by the playback).
+ * Waypoints (wpt) become the route's waypoints if they lie on it (at most
+ * WAYPOINT_MAX_OFF_ROUTE_M away); they say nothing about manoeuvres.
+ *
+ * Points may also carry a time (a recorded track, or a planned route whose
+ * router wrote its estimate into the file) and, in the TrackPointExtension,
+ * heart rate, cadence and power -- used by the playback, the time also for
+ * the remaining time.
  *
  * As soon as the file carries routing info (1 or 2), step 3 is skipped -- except for a
  * track (trk) whose rtept say nothing usable (no manoeuvre could be read from any of
@@ -53,6 +58,9 @@ public final class GpxParser {
     private static final Pattern EXIT_AFTER = Pattern.compile("(?i)(?:exit|ausfahrt)\\D{0,8}(\\d+)");
     private static final Pattern EXIT_BEFORE = Pattern.compile("(?i)(\\d+)\\.?\\s*(?:st|nd|rd|th)?\\s*(?:exit|ausfahrt)");
     private static final Pattern RNDB_CODE = Pattern.compile("^RN[DL]B(\\d+)$");
+
+    /** A wpt further from the route than this is a place beside it, not one the rider passes. */
+    static final double WAYPOINT_MAX_OFF_ROUTE_M = 100;
 
     private GpxParser() {
     }
@@ -98,6 +106,7 @@ public final class GpxParser {
 
         private final List<Pt> trk = new ArrayList<>();
         private final List<Pt> rte = new ArrayList<>();
+        private final List<Pt> wpt = new ArrayList<>();
         private final List<OsmAndSeg> osmandSegs = new ArrayList<>();
         private Pt current;
         private int trkSegBase;   // trk.size() at the start of the current trkseg
@@ -124,6 +133,7 @@ public final class GpxParser {
                     break;
                 case "trkpt":
                 case "rtept":
+                case "wpt":
                     current = new Pt();
                     current.lat = parseDouble(a.getValue("lat"));
                     current.lon = parseDouble(a.getValue("lon"));
@@ -162,7 +172,7 @@ public final class GpxParser {
             stack.remove(stack.size() - 1);
             String parent = stack.isEmpty() ? "" : stack.get(stack.size() - 1);
 
-            if (current != null && (parent.equals("trkpt") || parent.equals("rtept")
+            if (current != null && (parent.equals("trkpt") || parent.equals("rtept") || parent.equals("wpt")
                     || (inside("rtept") && parent.equals("extensions")))) {
                 switch (n) {
                     case "ele":
@@ -175,7 +185,8 @@ public final class GpxParser {
                         current.name = value;
                         break;
                     case "time":
-                        if (parent.equals("trkpt")) current.timeMs = parseTime(value);
+                        // Not the one in an rtept's extensions: BRouter writes seconds to the next hint there.
+                        if (!parent.equals("extensions")) current.timeMs = parseTime(value);
                         break;
                     case "desc":
                     case "cmt":
@@ -224,6 +235,9 @@ public final class GpxParser {
                 current = null;
             } else if (n.equals("rtept") && current != null) {
                 rte.add(current);
+                current = null;
+            } else if (n.equals("wpt") && current != null) {
+                wpt.add(current);
                 current = null;
             }
             text.setLength(0);
@@ -283,7 +297,7 @@ public final class GpxParser {
                     if (geometry == rte) {
                         at = geo.cum[i];
                     } else {
-                        at = alongTrack(geo, p.lat, p.lon, from);
+                        at = alongTrack(geo, p.lat, p.lon, from)[0];
                         from = at;
                     }
                     steps.add(new GpxRoute.Step(at, m[0], m[1], p.name));
@@ -300,7 +314,15 @@ public final class GpxParser {
             if (!hasInfo) {
                 steps = TurnDetector.detect(geo);
             }
-            return new GpxRoute(name, lat, lon, ele, time, hr, cad, power, steps, hasInfo);
+            List<GpxRoute.Waypoint> waypoints = new ArrayList<>();
+            for (Pt p : wpt) {
+                // Where the route passes the place twice, the first time counts.
+                double[] at = alongTrack(geo, p.lat, p.lon, 0);
+                if (at[1] <= WAYPOINT_MAX_OFF_ROUTE_M) {
+                    waypoints.add(new GpxRoute.Waypoint(at[0], p.name));
+                }
+            }
+            return new GpxRoute(name, lat, lon, ele, time, hr, cad, power, steps, hasInfo, waypoints);
         }
 
         /** A manoeuvre that is a turn (not just the start and the destination). */
@@ -341,8 +363,12 @@ public final class GpxParser {
             return b.toString();
         }
 
-        /** Distance along the route of the point on it closest to (lat, lon), searching forward from `from`. */
-        private static double alongTrack(GpxRoute r, double lat, double lon, double from) {
+        /**
+         * The point on the route closest to (lat, lon), searching forward from `from`.
+         *
+         * @return {distance along the route, distance from the route}
+         */
+        private static double[] alongTrack(GpxRoute r, double lat, double lon, double from) {
             double best = Double.MAX_VALUE;
             double bestAlong = from;
             for (int i = 0; i < r.pointCount() - 1; i++) {
@@ -361,7 +387,7 @@ public final class GpxParser {
                     bestAlong = Math.max(from, r.cum[i] + t * (r.cum[i + 1] - r.cum[i]));
                 }
             }
-            return bestAlong;
+            return new double[]{bestAlong, best};
         }
 
         /** ISO 8601 (GPX: UTC with "Z"); an offset is honoured, no zone means UTC. */

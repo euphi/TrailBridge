@@ -62,6 +62,21 @@ final class Routes {
         return new GpxRoute(base.name, base.lat, base.lon, base.ele, steps, true);
     }
 
+    static GpxRoute withWaypoints(GpxRoute base, GpxRoute.Waypoint... waypoints) {
+        return new GpxRoute(base.name, base.lat, base.lon, base.ele, null, null, null, null,
+                base.steps, base.hasRoutingInfo, java.util.Arrays.asList(waypoints));
+    }
+
+    /** The route with a time stamp at every point, as if ridden at secondsAt(distance). */
+    static GpxRoute withTimes(GpxRoute base, java.util.function.DoubleUnaryOperator secondsAt) {
+        long[] time = new long[base.pointCount()];
+        for (int i = 0; i < time.length; i++) {
+            time[i] = Math.round(secondsAt.applyAsDouble(base.cum[i]) * 1000);
+        }
+        return new GpxRoute(base.name, base.lat, base.lon, base.ele, time, null, null, null,
+                base.steps, base.hasRoutingInfo, base.waypoints);
+    }
+
     static java.io.InputStream stream(String s) {
         return new ByteArrayInputStream(s.getBytes(StandardCharsets.UTF_8));
     }

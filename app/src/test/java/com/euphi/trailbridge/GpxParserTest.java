@@ -111,6 +111,35 @@ public class GpxParserTest {
         assertEquals(300, r.steps.get(1).distM, 12);
     }
 
+    private static String wpt(double east, double north, String body) {
+        return "<wpt lat=\"" + Routes.lat(north) + "\" lon=\"" + Routes.lon(east) + "\">" + body + "</wpt>";
+    }
+
+    @Test
+    public void waypointsOnTheRouteInRidingOrder() throws Exception {
+        String gpx = Routes.trkGpx(L).replace("<trk>",
+                wpt(200, 305, "<name>Bäcker</name><sym>Food</sym>")       // on the second leg, 5 m beside it
+                        + wpt(3, 100, "")                                      // no name
+                        + wpt(150, 150, "<name>Abseits</name>")                // 150 m from either leg
+                        + "<trk>");
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertEquals("T", r.name);                            // a wpt's name is not the route's
+        assertEquals(3, r.steps.size());                      // and waypoints are no manoeuvres
+        assertEquals(2, r.waypoints.size());
+        assertEquals("", r.waypoints.get(0).name);
+        assertEquals(100, r.waypoints.get(0).distM, 2);
+        assertEquals("Bäcker", r.waypoints.get(1).name);
+        assertEquals(500, r.waypoints.get(1).distM, 2);
+    }
+
+    @Test
+    public void waypointOnARouteThatDoublesBackCountsTheFirstTime() throws Exception {
+        String gpx = Routes.trkGpx(new double[][]{{0, 0}, {0, 1000}, {0, 0}})
+                .replace("<trk>", wpt(0, 400, "<name>Brunnen</name>") + "<trk>");
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertEquals(400, r.waypoints.get(0).distM, 2);
+    }
+
     @Test(expected = GpxParser.GpxException.class)
     public void garbageIsRejected() throws Exception {
         GpxParser.parse(Routes.stream("not xml at all"), "x");
@@ -155,6 +184,20 @@ public class GpxParserTest {
         assertEquals(130, r.hr[2]);
         assertEquals(0, r.cad[1]);                               // coasting is a value, not "missing"
         assertEquals(85, r.cad[2]);
+    }
+
+    @Test
+    public void routePointsCarryTimesToo() throws Exception {
+        // a planned route with the router's time estimate; BRouter's seconds-to-the-next-hint
+        // in the extensions are not a time stamp
+        String gpx = "<gpx><rte>"
+                + rtept(0, 0, "<time>1970-01-01T00:00:00.000Z</time><extensions><time>3</time></extensions>")
+                + rtept(0, 300, "<time>1970-01-01T00:01:00.000Z</time>")
+                + rtept(300, 300, "<time>1970-01-01T00:02:30.500Z</time>") + "</rte></gpx>";
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertTrue(r.hasTimes());
+        assertEquals(0, r.timeMs[0]);
+        assertEquals(150500, r.timeMs[2]);
     }
 
     @Test

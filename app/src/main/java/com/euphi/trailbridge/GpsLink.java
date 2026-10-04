@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
@@ -106,6 +107,9 @@ public class GpsLink {
     };
 
     private static PositionState toPositionState(Location loc) {
+        // Height above sea level (not above the ellipsoid like getAltitude()): Android 14 and later.
+        boolean hasMsl = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && loc.hasMslAltitude();
+        int mslDm = hasMsl ? (int) Math.round(loc.getMslAltitudeMeters() * 10.0) : 0;
         return new PositionState(
                 true,
                 (int) Math.round(loc.getLatitude() * 1e7),
@@ -121,7 +125,9 @@ public class GpsLink {
                 // UTC of the fix; for GPS_PROVIDER this is the satellite time -- if it agrees with
                 // the phone's own clock, else the phone's time (GpsTime): the chip's first fixes
                 // after being switched on can carry a time that is hours off.
-                utcTimeMs(loc));
+                utcTimeMs(loc),
+                false, 0, false, 0, false, 0, false, 0, 0,
+                hasMsl, mslDm);
     }
 
     private static long utcTimeMs(Location loc) {

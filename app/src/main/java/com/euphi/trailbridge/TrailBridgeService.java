@@ -41,7 +41,8 @@ import java.util.concurrent.Executors;
  *
  * Zusaetzlich spielt der Service eine importierte GPX-Route ab
  * (RouteNavigator, gespeist von GpsLink) -- solange sie aktiv ist, ersetzt
- * sie die OsmAnd-Daten im Nav-Service und sendet das Hoehenprofil.
+ * sie die OsmAnd-Daten im Nav-Service, sendet das Hoehenprofil und stellt die
+ * Streckenuebersicht (Wegpunkte, Anstiege) zum Lesen bereit.
  *
  * Fuer Testzwecke kann die Route auch "abgefahren" werden (RoutePlayer): der
  * Service erzeugt dann einmal pro Sekunde eine Fake-Position samt simulierten
@@ -110,6 +111,9 @@ public class TrailBridgeService extends Service
     @Nullable private RouteNavigator navigator;   // nur solange die Route aktiv ist
     // Letzter OsmAnd-Stand, damit er nach "Route beenden" sofort wieder greift.
     @Nullable private NavState lastOsmAndNav;
+    // Zaehlt mit jeder neuen Streckenuebersicht weiter (1..255, nie 0), auch ueber Routen
+    // hinweg: der BikeComputer erkennt daran, dass er neu lesen muss. 0 = keine Uebersicht.
+    private int overviewRevision = 0;
 
     // ---- Testfahrt (GPX abspielen) ----
     @Nullable private RoutePlayer player;          // zur geladenen Route, auch ohne laufende Testfahrt
@@ -287,6 +291,7 @@ public class TrailBridgeService extends Service
         navigator = null;
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(PREF_ROUTE_ACTIVE, false).apply();
         publishProfile(null);
+        gattServer.updateOverview(null);
         NavState back = lastOsmAndNav != null ? lastOsmAndNav : NavState.NONE;
         lastNavState = back;
         if (uiListener != null) uiListener.onNavState(back);
@@ -455,6 +460,15 @@ public class TrailBridgeService extends Service
         StringBuilder b = new StringBuilder(r.name.isEmpty() ? "Route" : r.name);
         b.append(String.format(Locale.GERMANY, ": %.1f km", r.totalM / 1000));
         if (r.hasElevation()) b.append(", ").append(r.totalAscentM()).append(" Hm aufwärts");
+        if (!r.waypoints.isEmpty()) {
+            b.append(", ").append(r.waypoints.size()).append(r.waypoints.size() == 1 ? " Wegpunkt" : " Wegpunkte");
+        }
+        RouteTimes times = RouteTimes.of(r);
+        if (times != null) {
+            // Dann kommt auch die Restzeit aus der Datei statt aus der aktuellen Geschwindigkeit.
+            int minutes = (int) Math.round(times.remainingS(0) / 60);
+            b.append(String.format(Locale.GERMANY, ", Fahrzeit laut Datei %d:%02d h", minutes / 60, minutes % 60));
+        }
         int turns = r.steps.size() - 2;   // ohne Start und Ziel
         b.append(", ").append(turns).append(" Manöver (")
                 .append(r.hasRoutingInfo ? "aus der Datei)" : "aus der Track-Geometrie)");
@@ -500,9 +514,20 @@ public class TrailBridgeService extends Service
         double speed = state.hasSpeed ? state.speedCms / 100.0 : -1;
         RouteNavigator.Result r = nav.onFix(state.latitudeE7 / 1e7, state.longitudeE7 / 1e7,
                 speed, gattServer.maxPayload());
-        lastNavState = r.nav;
-        if (uiListener != null) uiListener.onNavState(r.nav);
-        gattServer.update(r.nav);
+        if (r.overviewChanged) {
+            // Erst die Uebersicht bereitstellen, dann der Nav-Frame mit ihrer Revision:
+            // der BikeComputer liest, sobald er die neue Revision sieht.
+            overviewRevision = overviewRevision % 255 + 1;
+            byte[] overview = OverviewFrameEncoder.encode(nav.overview(), overviewRevision);
+            gattServer.updateOverview(overview);
+            Log.i(TAG, "Streckenübersicht Revision " + overviewRevision + ": "
+                    + nav.overview().waypointsAhead().size() + " Wegpunkte, "
+                    + nav.overview().climbsAhead().size() + " Anstiege voraus, " + overview.length + " Byte");
+        }
+        NavState navState = r.nav.withOverviewRevision(overviewRevision);
+        lastNavState = navState;
+        if (uiListener != null) uiListener.onNavState(navState);
+        gattServer.update(navState);
         if (r.profile != null) {
             publishProfile(r.profile);
         } else if (r.clearProfile) {

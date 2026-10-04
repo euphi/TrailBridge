@@ -27,6 +27,18 @@ public final class GpxRoute {
         }
     }
 
+    /** A named place along the route (GPX wpt), projected onto it. */
+    public static final class Waypoint {
+        public final double distM;
+        /** "" if the file gives it no name. */
+        public final String name;
+
+        public Waypoint(double distM, String name) {
+            this.distM = distM;
+            this.name = name == null ? "" : name;
+        }
+    }
+
     public static final long NO_TIME = -1;
     public static final short NO_VALUE = -1;
 
@@ -51,6 +63,8 @@ public final class GpxRoute {
     /** True if the file carried its own routing information (rtept/OsmAnd
      *  route segments) -- then steps were NOT derived from the geometry. */
     public final boolean hasRoutingInfo;
+    /** Sorted by distM; only the waypoints that lie on the route. */
+    public final List<Waypoint> waypoints;
 
     /**
      * @param fileSteps steps as found in the file (may be empty); DEPART/ARRIVE
@@ -67,10 +81,17 @@ public final class GpxRoute {
         this(name, lat, lon, ele, timeMs, hr, cad, null, fileSteps, hasRoutingInfo);
     }
 
-    /** @param timeMs, hr, cad, power per-point recorded values; null = the file has none of that kind. */
     public GpxRoute(String name, double[] lat, double[] lon, float[] ele,
                     long[] timeMs, short[] hr, short[] cad, short[] power,
                     List<Step> fileSteps, boolean hasRoutingInfo) {
+        this(name, lat, lon, ele, timeMs, hr, cad, power, fileSteps, hasRoutingInfo,
+                Collections.<Waypoint>emptyList());
+    }
+
+    /** @param timeMs, hr, cad, power per-point recorded values; null = the file has none of that kind. */
+    public GpxRoute(String name, double[] lat, double[] lon, float[] ele,
+                    long[] timeMs, short[] hr, short[] cad, short[] power,
+                    List<Step> fileSteps, boolean hasRoutingInfo, List<Waypoint> waypoints) {
         this.name = name == null ? "" : name;
         this.power = power != null ? power : filled(new short[lat.length], NO_VALUE);
         this.timeMs = timeMs != null ? timeMs : filled(new long[lat.length], NO_TIME);
@@ -86,6 +107,14 @@ public final class GpxRoute {
         this.totalM = lat.length == 0 ? 0 : cum[lat.length - 1];
         this.hasRoutingInfo = hasRoutingInfo;
         this.steps = Collections.unmodifiableList(withEnds(fileSteps, totalM));
+        List<Waypoint> sorted = new ArrayList<>(waypoints);
+        Collections.sort(sorted, new Comparator<Waypoint>() {
+            @Override
+            public int compare(Waypoint a, Waypoint b) {
+                return Double.compare(a.distM, b.distM);
+            }
+        });
+        this.waypoints = Collections.unmodifiableList(sorted);
     }
 
     private static long[] filled(long[] a, long v) {

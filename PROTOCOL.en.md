@@ -64,6 +64,7 @@ TLV entry: `tag (1 byte) | length N (1 byte) | value (N bytes)`
 | 0x0B | NEXT_LANES | N (multiple of 4) | as 0x0A | as 0x0A, but for the turn after next (as 0x05/0x06/0x07) |
 | 0x0C | LANE_DISTANCE_M | 4 | uint32 LE, metres to the point where the LANES information applies | only if tag 0x0A is present |
 | 0x0D | NEXT_LANE_DISTANCE_M | 4 | uint32 LE, metres | only if tag 0x0B is present |
+| 0x0E | OVERVIEW_REVISION | 1 | uint8, 1..255 | only for navigation from a GPX route: revision of the route overview this frame belongs to, see "Route overview service" |
 
 **The firmware must skip unknown tags** (respect the length, ignore the value) -- this
 leaves room for later extensions without older firmware breaking on them. That is the
@@ -256,6 +257,7 @@ TLV entry: `tag (1 byte) | length N (1 byte) | value (N bytes)`
 | 0x0B | SIM_FLAGS | 1 | uint8 bit field, see below | only if something in this frame is simulated (otherwise the tag is missing) |
 | 0x0C | BARO_HEIGHT_DM | 4 | int32 LE, altitude in decimetres above sea level | only if TrailBridge knows a barometric altitude, see below |
 | 0x0D | POWER_W | 2 | uint16 LE, watts (0 = coasting) | only if TrailBridge knows a power value, see below |
+| 0x0E | MSL_ALTITUDE_DM | 4 | int32 LE, altitude in decimetres above sea level (geoid) | only for a real fix whose altitude the phone knows above sea level (Android 14+), see below |
 
 E7 fixed point for latitude/longitude (instead of floating point) for the same reason as
 everywhere else in the TLV format: a fixed, platform-independent byte layout, no trouble
@@ -470,6 +472,184 @@ A long climb on a coarse raster: from 36 000 m of remaining distance, start at 1
 04 03 3C 45 FD                                     DELTAS_DM = +60, +69, -3 (× 0.2 m)
 ```
 
+## Route overview service
+
+A fourth BLE service, only active while TrailBridge plays an imported GPX route. It tells
+what still lies **ahead of the rider** on the route: the destination, the waypoints of
+the GPX file (`wpt`) and the climbs. Unlike the other services it is **only read** -- no
+indicate, no CCCD, no heartbeat.
+
+### Why read instead of indicate
+
+- **The content rarely changes:** when the route starts and whenever a waypoint or a
+  summit is reached. The firmware computes distance and time to each entry from the nav
+  frame and the anchors of the overview (see "Distance and time") -- the overview does
+  not have to be transmitted again for that.
+- **The length:** an indication holds at most `ATT_MTU - 3` bytes (253). A value that is
+  read may be up to 512 bytes long; the client fetches it in pieces (read blob, "long
+  read"). `readValue()` of the ESP32 BLE library does that by itself, with NimBLE as with
+  Bluedroid. Ten waypoints with names do not fit into an indication, but into a read.
+- **The in-flight gate:** across all services only one indication is under way at a
+  time. A large overview would hold up turn instructions; a read bypasses that.
+
+A read lacks the signal "there is something new". `OVERVIEW_REVISION` (tag 0x0E) in the
+nav frame provides it; that frame comes every second or every 5 s anyway.
+
+### UUIDs
+
+- Service:        `7ee954a6-7a19-4b48-b052-f00d00e01e58`
+- Characteristic: `f031faa3-083d-4818-9eca-38420be835d0`
+  Properties: `READ`
+
+Like the other additional services not in the advertising, discovery after connecting.
+
+### Sequence
+
+1. A nav frame carries `OVERVIEW_REVISION`, and the value differs from the `REVISION` of
+   the stored overview (or none is stored yet): read the characteristic. **Not in the
+   indicate callback** -- `readValue()` blocks.
+2. Store the frame read together with its `REVISION`. If the next nav frame shows a
+   different revision, read again.
+3. A nav frame without `OVERVIEW_REVISION` (navigation from OsmAnd), `NAV_NONE` or the
+   end of the connection: discard the overview.
+
+TrailBridge always provides the new value first and then sends the nav frame with the
+new revision. The revision is 1..255 and counts on with every new overview, also across
+routes; 255 is followed by 1, 0 does not occur.
+
+### Frame format
+
+```
+Byte 0:   protocol version (currently 1)
+Byte 1:   message type
+Byte 2..: TLV entries (only for OVERVIEW)
+```
+
+| Value | Name | Meaning |
+|---|---|---|
+| 0x00 | HELLO | state after the app starts, no overview |
+| 0x01 | OVERVIEW | overview, followed by TLV entries |
+| 0x02 | OVERVIEW_NONE | no route active, no overview |
+
+| Tag | Name | Length | Format |
+|---|---|---|---|
+| 0x01 | REVISION | 1 | uint8, 1..255 -- the `OVERVIEW_REVISION` of the nav frames this overview belongs to |
+| 0x02 | WAYPOINTS_AHEAD | 1 | uint8, number of waypoints ahead, not counting the destination (255 = 255 or more) |
+| 0x03 | CLIMBS_TOTAL | 1 | uint8, number of climbs of the whole route (0 = none, or the route has no elevation data) |
+| 0x04 | WAYPOINT | 9 + N | one waypoint or the destination, see below; occurs several times |
+| 0x05 | CLIMB | 11 | one climb, see below; occurs several times |
+
+Value of `WAYPOINT`:
+
+| Byte | Meaning |
+|---|---|
+| 0 | flags -- bit 0 = `DESTINATION` (the destination of the route), bits 1-7 reserved (`0`, to be ignored) |
+| 1-4 | `REMAINING_AT_M`, uint32 LE: remaining distance of the route to the destination **at this waypoint** (0 for the destination) |
+| 5-8 | `REMAINING_TIME_AT_S`, uint32 LE: remaining time to the destination **at this waypoint**, seconds (0 for the destination); `0xFFFFFFFF` = unknown, the GPX has no time stamps |
+| 9.. | name, UTF-8, at most 32 bytes, no null terminator |
+
+Value of `CLIMB`:
+
+| Byte | Meaning |
+|---|---|
+| 0 | number of the climb, 1-based in riding direction over the whole route |
+| 1-2 | altitude gain from foot to summit, uint16 LE, metres |
+| 3-6 | length from foot to summit, uint32 LE, metres |
+| 7-10 | `FOOT_REMAINING_AT_M`, uint32 LE: remaining distance of the route to the destination **at the foot of the climb** |
+
+If a `CLIMB` value is longer than 11 bytes, the firmware ignores the rest; it skips
+unknown tags as everywhere.
+
+**Order and length:** after the three header tags comes the destination, then waypoints
+and climbs mixed in the order in which the rider reaches them (a climb counts at its
+foot). Each of the two lists is therefore "nearest first". The frame is at most 512
+bytes long. What does not fit is missing at the far end and moves up as soon as
+something at the front is reached. `WAYPOINTS_AHEAD` and `CLIMBS_TOTAL` say how many
+there really are -- if there are more than the frame contains, the list is shortened.
+
+### Waypoints
+
+- The source is the `wpt` elements of the GPX file. A waypoint counts if it lies at most
+  100 m beside the route; it then sits at the nearest point of the route. If the route
+  passes it twice, the first time counts.
+- A waypoint without a name is called "Wegpunkt N" (waypoint N) -- N is its number among
+  all waypoints of the route, in riding direction from 1. The destination is called
+  "Ziel" (destination).
+- When the rider reaches a waypoint, it drops out of the overview (new revision). It only
+  comes back when the rider falls back more than 100 m before it.
+
+### Distance and time
+
+The overview only carries anchors. Distance and time follow with the last nav frame --
+like the position in the elevation profile, without an odometer and across reconnects:
+
+```
+distance = REMAINING_DISTANCE_M - REMAINING_AT_M
+time     = REMAINING_TIME_S - REMAINING_TIME_AT_S                 (time anchor known)
+time     = REMAINING_TIME_S × distance / REMAINING_DISTANCE_M     (time anchor 0xFFFFFFFF)
+```
+
+For the destination these are exactly `REMAINING_DISTANCE_M` and `REMAINING_TIME_S` in
+both cases. A negative distance means: the waypoint has just been reached, the new
+overview is on its way -- do not show it any more. A negative time is 0. In the third
+line the product does not always fit into 32 bits -- compute in 64 bits; with
+`REMAINING_DISTANCE_M` = 0 the time is 0.
+
+**Where the time comes from:** if the GPX file has time stamps at its points,
+TrailBridge takes the remaining time from them -- for `REMAINING_TIME_S` in the nav
+frame as well as for the time anchors. For a recorded ride that is its time (every stop
+counts for at most 30 s), for a planned route the router's estimate, provided the
+router writes it into the file; it knows the climbs. BRouter (bikerouter.de) only writes
+it if the profile sets `assign showtime = true`, otherwise only the total time is in a
+comment. How fast the rider really is does not enter into this time.
+
+Without time stamps `REMAINING_TIME_S` is the remaining distance divided by the smoothed
+current speed, the time anchors are `0xFFFFFFFF`, and the third line distributes the
+remaining time by distance. That estimate knows nothing about the climbs in between.
+
+Off the route `REMAINING_DISTANCE_M` and `REMAINING_TIME_S` stand still, and so do
+distances and times.
+
+### Climbs
+
+A climb is what "What a climb is" above describes; altitude gain and length apply to the
+whole climb from foot to summit, even if the rider is already on it. The list begins
+with the climb the rider is currently on, otherwise with the next one. At the summit the
+climb drops out of the overview (new revision). Number and `CLIMBS_TOTAL` give "climb 3
+of 7".
+
+The distance to the foot is `REMAINING_DISTANCE_M - FOOT_REMAINING_AT_M`. If it is 0
+or negative, the rider is already on the climb; the summit is then still
+`length + distance` metres away (the distance is negative there). Climbs have no time
+anchor. The profile of a climb comes as before through the elevation profile service,
+500 m before its foot.
+
+### Example
+
+Revision 3, two waypoints ahead, the second of two climbs not ridden yet, the GPX has
+time stamps: the destination, "Bäcker" 30.5 km and 6100 s before the destination, climb
+2 (450 m of gain over 8.2 km, foot 22 km before the destination), a nameless waypoint
+12 km and 2400 s before the destination:
+
+```
+01 01                                              version=1, type=OVERVIEW
+01 01 03                                           REVISION = 3
+02 01 02                                           WAYPOINTS_AHEAD = 2
+03 01 02                                           CLIMBS_TOTAL = 2
+04 0D 01 00 00 00 00 00 00 00 00 5A 69 65 6C       WAYPOINT: DESTINATION, 0 m, 0 s, "Ziel"
+04 10 00 24 77 00 00 D4 17 00 00                   WAYPOINT: 30500 m, 6100 s,
+      42 C3 A4 63 6B 65 72                                   "Bäcker"
+05 0B 02 C2 01 08 20 00 00 F0 55 00 00             CLIMB: no. 2, 450 m gain, 8200 m, foot at 22000 m
+04 13 00 E0 2E 00 00 60 09 00 00                   WAYPOINT: 12000 m, 2400 s,
+      57 65 67 70 75 6E 6B 74 20 32                          "Wegpunkt 2"
+```
+
+78 bytes. If the nav frame reports `REMAINING_DISTANCE_M` = 36000 and
+`REMAINING_TIME_S` = 7200 with it, the Bäcker is 5.5 km and 1100 s away, the foot of
+climb 2 14 km, the nameless waypoint 24 km and 4800 s, the destination 36 km and
+7200 s. Without time stamps in the GPX the three waypoints would carry `FF FF FF FF` as
+their time anchor.
+
 ## Navigation from a GPX route
 
 When TrailBridge plays a GPX route itself, it sends perfectly normal `NAV_UPDATE` frames
@@ -477,6 +657,9 @@ in the navigation service (format above, unchanged), computed from the GPS posit
 Differences from OsmAnd: no lanes (0x0A-0x0D), street names only if the GPX contains
 them. Off the route (> 50 m) `MANEUVER = UNKNOWN (255)` is sent, `MANEUVER_DISTANCE_M` is
 then the distance to the route and `STREET_NAME` "Abseits der Route" (off the route).
+Every frame also carries `OVERVIEW_REVISION` (0x0E), off the route as well.
+`REMAINING_TIME_S` comes from the time stamps of the GPX if it has any, see "Distance
+and time".
 
 ## Sensor values and simulation mode
 
@@ -490,6 +673,13 @@ decimetres (`ALTITUDE_M` only has whole metres -- too coarse to compute a gradie
 it over a few dozen metres of distance). **The gradient is not transmitted:** the bike
 computer computes it itself as always from altitude and distance covered. **POWER_W** is
 the pedalling power of a power meter.
+
+**MSL_ALTITUDE_DM** is the altitude of a **real** GPS fix above sea level, in decimetres
+(`Location.getMslAltitudeMeters()`, Android 14 and later). `ALTITUDE_M`, in contrast, is the
+altitude above the ellipsoid and is about 45-50 m off in Germany. The bike computer
+calibrates its barometer against it ("GPS" button of the height calibration). The tag is
+missing if the phone does not know the altitude above sea level, and for made-up positions
+(`SIM_POSITION`). A GPS altitude is only good to about 10 m.
 
 **SIM_FLAGS (0x0B)**, uint8 bit field. **If the tag is missing (or 0), everything in the
 frame is real.**

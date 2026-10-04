@@ -32,10 +32,11 @@ import java.util.UUID;
  * BLE *central* exactly like it was for Komoot -- this class just gives it a
  * new kind of server to talk to.
  *
- * Hosts three independent GATT services on one BluetoothGattServer: navigation
+ * Hosts four GATT services on one BluetoothGattServer: navigation
  * (from OsmAnd or an imported GPX route), GPS position (straight from the
- * phone's GPS chip, see GpsLink) and the elevation profile of an imported
- * route (event-driven, no heartbeat). Android only allows one Indicate/Notify "in flight" per connected
+ * phone's GPS chip, see GpsLink), the elevation profile of an imported
+ * route (event-driven, no heartbeat) and the route overview (read only, see
+ * `overviewValue`). Android only allows one Indicate/Notify "in flight" per connected
  * device at a time -- across *all* characteristics, since onNotificationSent()
  * doesn't say which one just completed -- so all channels share a single
  * in-flight gate (see `indicateInFlight` / `pendingByChannel`) instead of each
@@ -55,6 +56,8 @@ public class BikeComputerGattServer {
     public static final UUID POSITION_CHAR_UUID = UUID.fromString("10c49e7b-4808-4d63-9b68-9ba6c385db0d");
     public static final UUID PROFILE_SERVICE_UUID = UUID.fromString("3c1f6a90-5b2e-4d7a-9c48-e0a1b7d25f63");
     public static final UUID PROFILE_CHAR_UUID = UUID.fromString("a84e0d17-6f3b-4c52-8e9d-1b70c2f4a596");
+    public static final UUID OVERVIEW_SERVICE_UUID = UUID.fromString("7ee954a6-7a19-4b48-b052-f00d00e01e58");
+    public static final UUID OVERVIEW_CHAR_UUID = UUID.fromString("f031faa3-083d-4818-9eca-38420be835d0");
     private static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     private static final long HEARTBEAT_INTERVAL_MS = 5000L;
@@ -125,6 +128,13 @@ public class BikeComputerGattServer {
     private Channel positionChannel;
     private Channel profileChannel;
     private final Map<UUID, Channel> channelsByCharUuid = new HashMap<>();
+
+    // The route overview is only read, never indicated: no Channel, no
+    // subscribers. It may be longer than one ATT packet; a device then reads
+    // it in pieces (Read Blob), all of which must come from the same value --
+    // hence the copy per device, taken when its read starts at offset 0.
+    private volatile byte[] overviewValue = OverviewFrameEncoder.hello();
+    private final Map<BluetoothDevice, byte[]> overviewReadByDevice = new HashMap<>();
 
     // Shared in-flight gate across both channels -- see class javadoc.
     private boolean indicateInFlight = false;
@@ -214,6 +224,20 @@ public class BikeComputerGattServer {
     }
 
     private void onProfileServiceAdded() {
+        BluetoothGattService overviewService = new BluetoothGattService(
+                OVERVIEW_SERVICE_UUID, BluetoothGattService.SERVICE_TYPE_PRIMARY);
+        overviewService.addCharacteristic(new BluetoothGattCharacteristic(
+                OVERVIEW_CHAR_UUID,
+                BluetoothGattCharacteristic.PROPERTY_READ,
+                BluetoothGattCharacteristic.PERMISSION_READ));
+        try {
+            gattServer.addService(overviewService);
+        } catch (SecurityException e) {
+            fail("addService (Übersicht) fehlgeschlagen: " + e.getMessage());
+        }
+    }
+
+    private void onOverviewServiceAdded() {
         // Not advertised (31-byte legacy limit, see PROTOCOL.md) -- the
         // BikeComputer finds it via GATT service discovery after connecting
         // through the nav service's advertisement below.
@@ -250,6 +274,9 @@ public class BikeComputerGattServer {
         if (positionChannel != null) mainHandler.removeCallbacks(positionChannel.heartbeat);
         mainHandler.removeCallbacks(indicateTimeout);
         mtuByDevice.clear();
+        synchronized (overviewReadByDevice) {
+            overviewReadByDevice.clear();
+        }
         synchronized (this) {
             indicateInFlight = false;
             inFlightChannel = null;
@@ -317,6 +344,15 @@ public class BikeComputerGattServer {
     public void updateProfile(ProfileFrame frame) {
         if (!running) return;
         send(profileChannel, frame == null ? ProfileFrameEncoder.none() : ProfileFrameEncoder.encode(frame));
+    }
+
+    /**
+     * Sets (or, with null, clears) the route overview the BikeComputer reads.
+     * Nothing is sent: the nav frames carry the overview's revision, and a
+     * device that sees a new one comes and reads.
+     */
+    public void updateOverview(byte[] frame) {
+        overviewValue = frame == null ? OverviewFrameEncoder.none() : frame;
     }
 
     /**
@@ -437,6 +473,9 @@ public class BikeComputerGattServer {
                 synchronized (mtuByDevice) {
                     mtuByDevice.remove(device);
                 }
+                synchronized (overviewReadByDevice) {
+                    overviewReadByDevice.remove(device);
+                }
             }
         }
 
@@ -452,12 +491,31 @@ public class BikeComputerGattServer {
                 onPositionServiceAdded();
             } else if (PROFILE_SERVICE_UUID.equals(service.getUuid())) {
                 onProfileServiceAdded();
+            } else if (OVERVIEW_SERVICE_UUID.equals(service.getUuid())) {
+                onOverviewServiceAdded();
             }
         }
 
         @Override
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
                                                  BluetoothGattCharacteristic characteristic) {
+            if (OVERVIEW_CHAR_UUID.equals(characteristic.getUuid())) {
+                byte[] value;
+                synchronized (overviewReadByDevice) {
+                    if (offset == 0) overviewReadByDevice.put(device, overviewValue);
+                    value = overviewReadByDevice.get(device);
+                }
+                if (value == null || offset > value.length) {
+                    safeRespond(device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, offset, null);
+                    return;
+                }
+                // The stack cuts the response to what fits into one packet; a full
+                // packet makes the device ask for the rest (ending with an empty one
+                // if the value is an exact multiple of the packet size).
+                safeRespond(device, requestId, BluetoothGatt.GATT_SUCCESS, offset,
+                        Arrays.copyOfRange(value, offset, value.length));
+                return;
+            }
             Channel channel = channelsByCharUuid.get(characteristic.getUuid());
             if (channel == null) {
                 safeRespond(device, requestId, BluetoothGatt.GATT_FAILURE, offset, null);

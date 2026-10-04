@@ -30,6 +30,7 @@ public final class PositionFrameEncoder {
     public static final int TAG_SIM_FLAGS = 0x0B;
     public static final int TAG_BARO_HEIGHT_DM = 0x0C;
     public static final int TAG_POWER_W = 0x0D;
+    public static final int TAG_MSL_ALTITUDE_DM = 0x0E;
 
     private PositionFrameEncoder() {
     }
@@ -86,6 +87,9 @@ public final class PositionFrameEncoder {
         }
         if (s.hasPower) {
             writeU16(out, TAG_POWER_W, Math.max(0, Math.min(65535, s.powerW)));
+        }
+        if (s.hasMslAltitude) {
+            writeS32(out, TAG_MSL_ALTITUDE_DM, s.mslAltitudeDm);
         }
 
         return out.toByteArray();
