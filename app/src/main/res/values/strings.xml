@@ -2,50 +2,50 @@
 <resources>
     <string name="app_name">TrailBridge</string>
     <string name="header_sub">OsmAnd · BikeComputer</string>
-    <string name="status_initial">Starte …</string>
-    <string name="navstate_initial">(noch keine Navigationsdaten)</string>
-    <string name="retry_button">Erneut versuchen</string>
-    <string name="ble_status_initial">BLE: startet …</string>
-    <string name="position_initial">(noch keine GPS-Daten)</string>
-    <string name="gpx_load_button">GPX laden</string>
-    <string name="route_start">Route starten</string>
-    <string name="route_stop">Route beenden</string>
-    <string name="test_button">Testfahrt</string>
-    <string name="emulate_hr">Puls emulieren</string>
-    <string name="emulate_cad">Trittfrequenz emulieren</string>
-    <string name="emulate_power">Leistung emulieren</string>
-    <string name="prev_maneuver">« Manöver</string>
-    <string name="next_maneuver">Manöver »</string>
-    <string name="play">Abspielen</string>
+    <string name="status_initial">Starting …</string>
+    <string name="navstate_initial">(no navigation data yet)</string>
+    <string name="retry_button">Try again</string>
+    <string name="ble_status_initial">BLE: starting …</string>
+    <string name="position_initial">(no GPS data yet)</string>
+    <string name="gpx_load_button">Load GPX</string>
+    <string name="route_start">Start route</string>
+    <string name="route_stop">Stop route</string>
+    <string name="test_button">Test ride</string>
+    <string name="emulate_hr">Emulate heart rate</string>
+    <string name="emulate_cad">Emulate cadence</string>
+    <string name="emulate_power">Emulate power</string>
+    <string name="prev_maneuver">« Maneuver</string>
+    <string name="next_maneuver">Maneuver »</string>
+    <string name="play">Play</string>
     <string name="pause">Pause</string>
-    <string name="replay">Nochmal</string>
-    <string name="stop">Stopp</string>
-    <string name="route_none">(keine GPX-Route geladen)</string>
+    <string name="replay">Again</string>
+    <string name="stop">Stop</string>
+    <string name="route_none">(no GPX route loaded)</string>
 
-    <!-- Kartenköpfe (werden per textAllCaps in Versalien gesetzt) -->
-    <string name="card_connection">Verbindung</string>
+    <!-- Card headers (set in capitals via textAllCaps) -->
+    <string name="card_connection">Connection</string>
     <string name="card_route">Route</string>
-    <string name="card_test">Testfahrt</string>
+    <string name="card_test">Test ride</string>
     <string name="card_position">Position</string>
     <string name="card_navigation">Navigation</string>
-    <string name="card_raw">Rohdaten</string>
-    <string name="card_mode">Moduswahl</string>
+    <string name="card_raw">Raw data</string>
+    <string name="card_mode">Mode</string>
     <string name="mode_osmand">OsmAnd</string>
-    <string name="mode_gpx_nav">GPS/GPX-Navigation</string>
-    <string name="mode_simulation">GPX-Simulation</string>
+    <string name="mode_gpx_nav">GPS/GPX navigation</string>
+    <string name="mode_simulation">GPX simulation</string>
     <string name="mode_all">All-in-one</string>
-    <string name="mode_hint_osmand">Die Navigation kommt aus OsmAnd.</string>
-    <string name="mode_hint_gpx_nav">TrailBridge navigiert selbst: GPX-Route und echte GPS-Position.</string>
-    <string name="mode_hint_simulation">Die geladene GPX-Route wird als Testfahrt abgespielt, mit simulierter Position.</string>
-    <string name="mode_hint_all">Alles auf einem Screen: OsmAnd, GPX-Navigation und Simulation.</string>
-    <string name="card_profile">Höhenprofil</string>
-    <string name="navi_button">Navi-Modus</string>
+    <string name="mode_hint_osmand">Navigation comes from OsmAnd.</string>
+    <string name="mode_hint_gpx_nav">TrailBridge navigates by itself: GPX route and real GPS position.</string>
+    <string name="mode_hint_simulation">The loaded GPX route is played back as a test ride, with a simulated position.</string>
+    <string name="mode_hint_all">Everything on one screen: OsmAnd, GPX navigation and simulation.</string>
+    <string name="card_profile">Elevation profile</string>
+    <string name="navi_button">Navi mode</string>
     <string name="navi_title">Navi</string>
-    <string name="navi_close">Beenden</string>
+    <string name="navi_close">Close</string>
     <string name="label_osmand">OsmAnd</string>
     <string name="label_ble">BLE</string>
-    <string name="sim_chip">Simuliert</string>
-    <string name="gps_none">kein Fix</string>
+    <string name="sim_chip">Simulated</string>
+    <string name="gps_none">no fix</string>
     <string name="footer_version">TrailBridge %1$s · GPL-3.0</string>
 
     <string name="dash">–</string>
@@ -54,23 +54,104 @@
     <string name="unit_bpm">bpm</string>
     <string name="unit_rpm">rpm</string>
 
-    <!-- Navigationskarte -->
-    <string name="nav_none">Keine Navigation</string>
-    <string name="nav_then">danach: %1$s in %2$s</string>
-    <string name="nav_remaining">Ziel: %1$s · %2$s</string>
+    <!-- Navigation card -->
+    <string name="nav_none">No navigation</string>
+    <string name="nav_then">then: %1$s in %2$s</string>
+    <string name="nav_remaining">Destination: %1$s · %2$s</string>
     <string name="maneuver_depart">Start</string>
-    <string name="maneuver_arrive">Ziel</string>
-    <string name="maneuver_straight">Geradeaus</string>
-    <string name="maneuver_slight_left">Leicht links</string>
-    <string name="maneuver_left">Links abbiegen</string>
-    <string name="maneuver_sharp_left">Scharf links</string>
-    <string name="maneuver_slight_right">Leicht rechts</string>
-    <string name="maneuver_right">Rechts abbiegen</string>
-    <string name="maneuver_sharp_right">Scharf rechts</string>
-    <string name="maneuver_keep_left">Links halten</string>
-    <string name="maneuver_keep_right">Rechts halten</string>
-    <string name="maneuver_uturn">Wenden</string>
-    <string name="maneuver_roundabout">Kreisverkehr</string>
-    <string name="maneuver_roundabout_exit">Kreisverkehr, %1$d. Ausfahrt</string>
-    <string name="maneuver_unknown">Weiter</string>
+    <string name="maneuver_arrive">Destination</string>
+    <string name="maneuver_straight">Straight ahead</string>
+    <string name="maneuver_slight_left">Slight left</string>
+    <string name="maneuver_left">Turn left</string>
+    <string name="maneuver_sharp_left">Sharp left</string>
+    <string name="maneuver_slight_right">Slight right</string>
+    <string name="maneuver_right">Turn right</string>
+    <string name="maneuver_sharp_right">Sharp right</string>
+    <string name="maneuver_keep_left">Keep left</string>
+    <string name="maneuver_keep_right">Keep right</string>
+    <string name="maneuver_uturn">U-turn</string>
+    <string name="maneuver_roundabout">Roundabout</string>
+    <string name="maneuver_roundabout_exit">Roundabout, exit %1$d</string>
+    <string name="maneuver_unknown">Continue</string>
+
+    <!-- Status, errors and messages from the code -->
+    <string name="osmand_not_found">OsmAnd not found (net.osmand.plus / net.osmand / net.osmand.dev). Is it installed?</string>
+    <string name="osmand_bind_refused">%1$s found, but bindService() was refused.</string>
+    <string name="osmand_connecting">connecting to %1$s …</string>
+    <string name="osmand_connected_waiting">connected, waiting for navigation data</string>
+    <string name="osmand_not_enabled">NOT ENABLED -- in OsmAnd: Menu > Plugins > TrailBridge > enable, then restart this app</string>
+    <string name="osmand_lost">OsmAnd connection lost (app closed/updated?)</string>
+    <string name="osmand_register_error">Error registering: %1$s</string>
+
+    <string name="gps_permission_missing">GPS: location permission not granted</string>
+    <string name="gps_no_manager">GPS: no LocationManager on this device</string>
+    <string name="gps_waiting_fix">GPS: waiting for first fix</string>
+    <string name="gps_provider_off">GPS: location service (GPS) is switched off</string>
+    <string name="gps_permission_denied">GPS: permission denied: %1$s</string>
+    <string name="gps_no_provider">GPS: no GPS provider on this device</string>
+    <string name="gps_provider_enabled">GPS: location service switched on, waiting for fix</string>
+    <string name="gps_provider_disabled">GPS: location service switched off</string>
+
+    <string name="notifications_off_hint">Notifications are off: the relay keeps running in the background, but without the status notification and its Stop button. You can stop it in Android\'s list of active apps.</string>
+    <string name="ble_permission_denied">Bluetooth permission denied -- the navigation relay cannot start.</string>
+    <plurals name="ble_advertising">
+        <item quantity="one">BLE: advertising, %d subscriber</item>
+        <item quantity="other">BLE: advertising, %d subscribers</item>
+    </plurals>
+    <string name="ble_error">BLE error: %1$s</string>
+    <string name="ble_no_peripheral">This device does not support the BLE peripheral role (no advertiser).</string>
+    <string name="ble_gatt_open_failed">openGattServer() failed.</string>
+    <string name="ble_permission_missing">Missing Bluetooth permission: %1$s</string>
+    <string name="ble_add_service_failed">addService (%1$s) failed: %2$s</string>
+    <string name="ble_add_service_failed_uuid">addService failed for %1$s, status %2$d</string>
+    <string name="ble_advertise_failed">startAdvertising failed: %1$s</string>
+    <string name="ble_advertise_failed_code">Advertising failed, error code %1$d</string>
+
+    <string name="gpx_read_failed">Could not read GPX: %1$s</string>
+    <string name="gpx_unreadable">File not readable</string>
+    <string name="gpx_too_large">File larger than 20 MB</string>
+    <string name="gpx_import_failed">GPX import failed: %1$s</string>
+    <string name="gpx_invalid">Not a valid GPX file: %1$s</string>
+    <string name="gpx_empty">The GPX file contains no route or track (at least 2 points).</string>
+    <string name="route_default_name">Route</string>
+    <string name="summary_head">%1$s: %2$s km</string>
+    <string name="summary_ascent">, %1$d m ascent</string>
+    <plurals name="summary_waypoints">
+        <item quantity="one">, %d waypoint</item>
+        <item quantity="other">, %d waypoints</item>
+    </plurals>
+    <string name="summary_time">, riding time per file %1$d:%2$02d h</string>
+    <plurals name="summary_maneuvers_file">
+        <item quantity="one">, %d maneuver (from the file)</item>
+        <item quantity="other">, %d maneuvers (from the file)</item>
+    </plurals>
+    <plurals name="summary_maneuvers_track">
+        <item quantity="one">, %d maneuver (from the track geometry)</item>
+        <item quantity="other">, %d maneuvers (from the track geometry)</item>
+    </plurals>
+    <string name="summary_no_elevation">, no elevation data</string>
+    <string name="profile_no_height">no elevation data</string>
+
+    <string name="notif_channel_name">TrailBridge active</string>
+    <string name="notif_channel_desc">Shows that TrailBridge is relaying navigation and GPS data to the BikeComputer in the background.</string>
+    <string name="notif_title">TrailBridge active</string>
+    <string name="notif_text">Relays OsmAnd navigation and GPS position to the BikeComputer via BLE</string>
+    <string name="notif_stop">Stop</string>
+
+    <!-- Test ride -->
+    <string name="sensor_info">Speed: %1$s\nHeart rate: %2$s\nCadence: %3$s\nPower: %4$s\nElevation: %5$s</string>
+    <string name="speed_from_gpx">from the GPX time stamps</string>
+    <string name="speed_computed">computed (GPX without time stamps)</string>
+    <string name="source_gpx">from the GPX</string>
+    <string name="source_emulated">not in the GPX -- emulated</string>
+    <string name="source_none">not in the GPX -- not sent</string>
+    <string name="height_gpx">from the GPX (the BikeComputer computes the gradient itself)</string>
+    <string name="playback_hr">HR %1$d</string>
+    <string name="playback_cad">Cad %1$d</string>
+    <string name="playback_finished">Destination reached</string>
+
+    <!-- Texts that appear on the BikeComputer -->
+    <string name="off_route">Off route</string>
+    <string name="destination_name">Destination</string>
+    <string name="waypoint_unnamed">Waypoint %1$d</string>
 </resources>

@@ -1,4 +1,6 @@
-• New look in the BikeComputer's Rim & Ridge design
-• Navigation mode: only navigation, position and the transmitted elevation profile
-• Mode selection: OsmAnd, GPS/GPX navigation, GPX simulation, all-in-one
-• GPX routes: own navigation, elevation profile service, test ride with simulated sensor values
+• German and English (English by default, German if the system language is German)
+• Only Bluetooth is needed to start; location (GPS) and notifications are optional, with a hint
+• New Rim & Ridge look, navigation mode, mode selection
+• GPX routes: own navigation, test ride with simulated sensor values
+• Elevation profile of the route ahead, climbs are announced
+• Route overview with destination, waypoints and climbs

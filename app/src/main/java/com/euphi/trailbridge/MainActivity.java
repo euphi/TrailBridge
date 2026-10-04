@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.ByteArrayOutputStream;
@@ -60,7 +61,8 @@ import java.util.Locale;
  */
 public class MainActivity extends AppCompatActivity implements TrailBridgeService.UiListener {
 
-    private static final int REQUEST_BLE_PERMISSIONS = 1001;
+    private static final int REQUEST_PERMISSIONS = 1001;
+    private boolean askedOptional = false;
 
     private TextView statusView;
     private TextView bleStatusView;
@@ -218,16 +220,17 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         LiveCards.setDot(this, dot, colorRes);
     }
 
-    /**
-     * Colour of the OsmAnd dot, picked from the status text OsmAndLink sets -- a purely
-     * cosmetic guess: a text it doesn't know just leaves the dot grey.
-     */
-    private static int osmandDotColor(String status) {
-        if (status.startsWith("verbunden")) return R.color.rr_zone_green;
-        if (status.startsWith("NICHT FREIGESCHALTET") || status.startsWith("verbinde")) return R.color.rr_zone_yellow;
-        if (status.contains("nicht gefunden") || status.contains("verloren")
-                || status.contains("Fehler") || status.contains("abgelehnt")) return R.color.rr_zone_red;
-        return R.color.rr_muted;
+    private static int osmandDotColor(OsmAndLink.Status kind) {
+        switch (kind) {
+            case CONNECTED:
+                return R.color.rr_zone_green;
+            case ATTENTION:
+                return R.color.rr_zone_yellow;
+            case ERROR:
+                return R.color.rr_zone_red;
+            default:
+                return R.color.rr_muted;
+        }
     }
 
     private void setupTestPanel() {
@@ -329,18 +332,18 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         String name = displayName(uri);
         new Thread(() -> {
             try (InputStream in = getContentResolver().openInputStream(uri)) {
-                if (in == null) throw new IOException("Datei nicht lesbar");
+                if (in == null) throw new IOException(getString(R.string.gpx_unreadable));
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buf = new byte[16384];
                 int n;
                 while ((n = in.read(buf)) > 0) {
                     out.write(buf, 0, n);
-                    if (out.size() > MAX_GPX_BYTES) throw new IOException("Datei größer als 20 MB");
+                    if (out.size() > MAX_GPX_BYTES) throw new IOException(getString(R.string.gpx_too_large));
                 }
                 target.loadGpx(out.toByteArray(), name);
             } catch (IOException | SecurityException e) {
                 runOnUiThread(() -> Toast.makeText(this,
-                        "GPX konnte nicht gelesen werden: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                        getString(R.string.gpx_read_failed, e.getMessage()), Toast.LENGTH_LONG).show());
             }
         }, "gpx-read").start();
     }
@@ -354,7 +357,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
             }
         } catch (RuntimeException ignored) {
         }
-        return "Route";
+        return getString(R.string.route_default_name);
     }
 
     private void updateRouteButton() {
@@ -383,63 +386,84 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         }
     }
 
-    // ---- Bluetooth-/Benachrichtigungs-Berechtigungen (nur ab API 31 bzw. 33 "dangerous") ----
+    // ---- Berechtigungen ----
+    // Nur Bluetooth (ab API 31) ist Pflicht: ohne startet der Dienst nicht. Standort ist nur
+    // für den GPS-Teil nötig (GpsLink, GPX-Navigation), Benachrichtigungen nur, damit man
+    // die Dauerbenachrichtigung sieht -- der Foreground Service läuft auch ohne sie.
 
-    /** The runtime permissions the service needs that are not granted (yet). */
-    static List<String> missingPermissions(Context context) {
+    /** Whether the permission is granted ({@code false} for those the running API level doesn't ask for). */
+    private static boolean missing(Context context, String permission) {
+        return ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** The runtime permissions without which the service cannot start. */
+    static List<String> missingRequiredPermissions(Context context) {
         List<String> missing = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE)
-                    != PackageManager.PERMISSION_GRANTED) {
+            if (missing(context, Manifest.permission.BLUETOOTH_ADVERTISE)) {
                 missing.add(Manifest.permission.BLUETOOTH_ADVERTISE);
             }
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
-                    != PackageManager.PERMISSION_GRANTED) {
+            if (missing(context, Manifest.permission.BLUETOOTH_CONNECT)) {
                 missing.add(Manifest.permission.BLUETOOTH_CONNECT);
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                missing.add(Manifest.permission.POST_NOTIFICATIONS);
-            }
+        return missing;
+    }
+
+    /** The permissions that only add to what the service does (GPS position, visible notification). */
+    private static List<String> missingOptionalPermissions(Context context) {
+        List<String> missing = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && missing(context, Manifest.permission.POST_NOTIFICATIONS)) {
+            missing.add(Manifest.permission.POST_NOTIFICATIONS);
         }
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (missing(context, Manifest.permission.ACCESS_FINE_LOCATION)) {
             missing.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
         return missing;
     }
 
     private void startServiceIfPermitted() {
-        List<String> missing = missingPermissions(this);
-        if (missing.isEmpty()) {
-            startAndBindService();
-        } else {
-            ActivityCompat.requestPermissions(this, missing.toArray(new String[0]), REQUEST_BLE_PERMISSIONS);
+        List<String> ask = new ArrayList<>(missingRequiredPermissions(this));
+        // Ask for the optional ones only once per screen, so a "no" is not asked again on every return.
+        if (!askedOptional) ask.addAll(missingOptionalPermissions(this));
+        askedOptional = true;
+        if (!ask.isEmpty()) {
+            ActivityCompat.requestPermissions(this, ask.toArray(new String[0]), REQUEST_PERMISSIONS);
         }
+        if (missingRequiredPermissions(this).isEmpty()) {
+            startAndBindService();
+        }
+        updateNotificationHint();
+    }
+
+    /** Tells the rider that the service runs on without its notification, if they turned it off. */
+    private void updateNotificationHint() {
+        boolean off = !NotificationManagerCompat.from(this).areNotificationsEnabled();
+        findViewById(R.id.notificationHint).setVisibility(off ? View.VISIBLE : View.GONE);
     }
 
     private void startAndBindService() {
+        // Also re-runs the service's onStartCommand, which picks up location (GPS, foreground
+        // service type) if it was granted since.
         TrailBridgeService.start(this);
-        bindService(new Intent(this, TrailBridgeService.class), serviceConnection, Context.BIND_AUTO_CREATE);
+        if (!bound) {
+            bound = bindService(new Intent(this, TrailBridgeService.class), serviceConnection,
+                    Context.BIND_AUTO_CREATE);
+        }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                             @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_BLE_PERMISSIONS) {
-            boolean allGranted = true;
-            for (int r : grantResults) {
-                if (r != PackageManager.PERMISSION_GRANTED) allGranted = false;
-            }
-            if (allGranted) {
-                startAndBindService();
-            } else {
-                bleStatusView.setText("Berechtigung(en) verweigert (Bluetooth/Benachrichtigung/Standort) -- Dienst kann nicht vollständig starten.");
-                setDot(bleDot, R.color.rr_zone_red);
-            }
+        if (requestCode != REQUEST_PERMISSIONS) return;
+        updateNotificationHint();
+        if (missingRequiredPermissions(this).isEmpty()) {
+            startAndBindService();
+        } else {
+            bleStatusView.setText(R.string.ble_permission_denied);
+            setDot(bleDot, R.color.rr_zone_red);
         }
     }
 
@@ -468,11 +492,11 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     // ---- TrailBridgeService.UiListener ----
 
     @Override
-    public void onStatusChanged(String status) {
+    public void onStatusChanged(String status, OsmAndLink.Status kind) {
         runOnUiThread(() -> {
             statusView.setText(status);
-            setDot(osmandDot, osmandDotColor(status));
-            osmandConnected = status.startsWith("verbunden");
+            setDot(osmandDot, osmandDotColor(kind));
+            osmandConnected = kind == OsmAndLink.Status.CONNECTED;
             applyMode();
         });
     }
@@ -501,19 +525,19 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     @Override
     public void onSubscriberCountChanged(int count) {
         runOnUiThread(() -> {
-            bleStatusView.setText("BLE: Advertising, " + count + " Abonnent(en)");
+            bleStatusView.setText(getResources().getQuantityString(R.plurals.ble_advertising, count, count));
             // green: the BikeComputer is subscribed; yellow: advertising, nobody there yet
             setDot(bleDot, count > 0 ? R.color.rr_zone_green : R.color.rr_zone_yellow);
         });
     }
 
     @Override
-    public void onRouteChanged(String summary, boolean active) {
+    public void onRouteChanged(String summary, boolean active, boolean error) {
         runOnUiThread(() -> {
             routeActive = active;
             // "" = keine Route geladen; Fehlermeldungen lassen den Ladezustand stehen
             if (summary.isEmpty()) routeLoaded = false;
-            else if (!summary.startsWith("GPX-Import fehlgeschlagen")) routeLoaded = true;
+            else if (!error) routeLoaded = true;
             routeInfoView.setText(summary.isEmpty() ? getString(R.string.route_none) : summary);
             updateRouteButton();
         });
@@ -551,25 +575,22 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         }
         updatingTestUi = false;
 
-        sensorInfoView.setText(
-                "Geschwindigkeit: " + (st.speedSource == RoutePlayer.Source.GPX
-                        ? "aus den GPX-Zeitstempeln" : "berechnet (GPX ohne Zeitstempel)")
-                + "\nPuls: " + sourceText(st.hrSource)
-                + "\nTrittfrequenz: " + sourceText(st.cadSource)
-                + "\nLeistung: " + sourceText(st.powerSource)
-                + "\nHöhe: " + (st.hasHeight ? "aus der GPX (Gradient berechnet der BikeComputer selbst)"
-                        : "nicht in der GPX -- wird nicht gesendet"));
+        sensorInfoView.setText(getString(R.string.sensor_info,
+                getString(st.speedSource == RoutePlayer.Source.GPX
+                        ? R.string.speed_from_gpx : R.string.speed_computed),
+                sourceText(st.hrSource), sourceText(st.cadSource), sourceText(st.powerSource),
+                getString(st.hasHeight ? R.string.height_gpx : R.string.source_none)));
 
         StringBuilder info = new StringBuilder(String.format(Locale.getDefault(),
                 "%.2f / %.1f km  %s / %s", st.distM / 1000, st.totalM / 1000,
                 clock(st.timeS), clock(st.durationS)));
         if (st.active) {
             info.append(String.format(Locale.getDefault(), "\n%.1f km/h", st.speedMs * 3.6));
-            if (st.hr >= 0) info.append(String.format(Locale.getDefault(), "  Puls %d", st.hr));
-            if (st.cad >= 0) info.append(String.format(Locale.getDefault(), "  Tf %d", st.cad));
+            if (st.hr >= 0) info.append("  " + getString(R.string.playback_hr, st.hr));
+            if (st.cad >= 0) info.append("  " + getString(R.string.playback_cad, st.cad));
             if (st.power >= 0) info.append(String.format(Locale.getDefault(), "  %d W", st.power));
             if (!Double.isNaN(st.eleM)) info.append(String.format(Locale.getDefault(), "  %d m", Math.round(st.eleM)));
-            if (st.finished) info.append("\nZiel erreicht");
+            if (st.finished) info.append("\n").append(getString(R.string.playback_finished));
         }
         playbackInfoView.setText(info);
 
@@ -577,14 +598,14 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
                 : st.finished ? R.string.replay : R.string.play);
     }
 
-    private static String sourceText(RoutePlayer.Source source) {
+    private String sourceText(RoutePlayer.Source source) {
         switch (source) {
             case GPX:
-                return "aus der GPX";
+                return getString(R.string.source_gpx);
             case EMULATED:
-                return "nicht in der GPX -- emuliert";
+                return getString(R.string.source_emulated);
             default:
-                return "nicht in der GPX -- wird nicht gesendet";
+                return getString(R.string.source_none);
         }
     }
 
@@ -596,7 +617,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     @Override
     public void onBleError(String message) {
         runOnUiThread(() -> {
-            bleStatusView.setText("BLE-Fehler: " + message);
+            bleStatusView.setText(getString(R.string.ble_error, message));
             setDot(bleDot, R.color.rr_zone_red);
         });
     }

@@ -57,14 +57,17 @@ public class TrailBridgeService extends Service
         implements OsmAndLink.Listener, GpsLink.Listener, BikeComputerGattServer.Listener {
 
     public interface UiListener {
-        void onStatusChanged(String status);
+        void onStatusChanged(String status, OsmAndLink.Status kind);
         void onNavState(NavState state);
         void onGpsStatusChanged(String status);
         void onPositionUpdate(PositionState state);
         void onSubscriberCountChanged(int count);
         void onBleError(String message);
-        /** @param summary "" if no route is loaded */
-        void onRouteChanged(String summary, boolean active);
+        /**
+         * @param summary "" if no route is loaded
+         * @param error   summary is the message of a failed import; the loaded route (if any) stays as it was
+         */
+        void onRouteChanged(String summary, boolean active, boolean error);
         /** @param state null if no route is loaded */
         void onPlaybackChanged(@Nullable PlaybackState state);
         /**
@@ -133,6 +136,7 @@ public class TrailBridgeService extends Service
     // Zuletzt bekannter Stand, damit eine (neu) gebundene Activity sofort den
     // aktuellen Stand zeigt statt bis zum naechsten Event zu warten.
     private String lastStatus = "";
+    private OsmAndLink.Status lastStatusKind = OsmAndLink.Status.IDLE;
     @Nullable private NavState lastNavState;
     private String lastGpsStatus = "";
     @Nullable private PositionState lastPositionState;
@@ -168,14 +172,15 @@ public class TrailBridgeService extends Service
         startForegroundNotification();
         if (!started) {
             started = true;
+            // Wird nur aufgerufen, nachdem MainActivity die Bluetooth-Berechtigungen
+            // bekommen hat (MainActivity.startServiceIfPermitted) -- der
+            // Service selbst kann keine Berechtigungsdialoge zeigen.
             osmAndLink.start();
-            // Wird nur aufgerufen, nachdem MainActivity die noetigen
-            // Laufzeit-Berechtigungen (Bluetooth, Standort) bereits erteilt
-            // bekommen hat (siehe MainActivity.startServiceIfPermitted) --
-            // der Service selbst kann keine Berechtigungsdialoge zeigen.
-            gpsLink.start();
             gattServer.start();
         }
+        // Standort ist optional und kann später dazukommen: GpsLink.start() tut nichts, wenn
+        // es schon läuft, und meldet sonst die fehlende Berechtigung.
+        gpsLink.start();
         return START_STICKY;
     }
 
@@ -201,13 +206,13 @@ public class TrailBridgeService extends Service
         this.uiListener = listener;
         if (listener != null) {
             // aktuellen Stand sofort nachreichen
-            listener.onStatusChanged(lastStatus);
+            listener.onStatusChanged(lastStatus, lastStatusKind);
             if (lastNavState != null) listener.onNavState(lastNavState);
             listener.onGpsStatusChanged(lastGpsStatus);
             if (lastPositionState != null) listener.onPositionUpdate(lastPositionState);
             listener.onSubscriberCountChanged(lastSubscriberCount);
             if (lastBleError != null) listener.onBleError(lastBleError);
-            listener.onRouteChanged(routeSummary, navigator != null);
+            listener.onRouteChanged(routeSummary, navigator != null, false);
             listener.onPlaybackChanged(lastPlayback);
             listener.onProfileChanged(lastProfile);
         }
@@ -242,8 +247,8 @@ public class TrailBridgeService extends Service
             try {
                 result = GpxParser.parse(new ByteArrayInputStream(data), displayName);
             } catch (GpxParser.GpxException e) {
-                String msg = "GPX-Import fehlgeschlagen: " + e.getMessage();
-                mainHandler.post(() -> notifyRoute(msg));
+                String msg = getString(R.string.gpx_import_failed, e.localized(this));
+                mainHandler.post(() -> notifyRoute(msg, true));
                 return;
             }
             final GpxRoute parsed = result;
@@ -251,7 +256,7 @@ public class TrailBridgeService extends Service
                 saveRouteFile(data);
             } catch (IOException e) {
                 // Die Route laeuft trotzdem, nur ein Neustart des Dienstes vergisst sie.
-                Log.w(TAG, "Route konnte nicht gespeichert werden", e);
+                Log.w(TAG, "Could not save the route", e);
             }
             String summary = summarize(parsed);
             RoutePlayer parsedPlayer = new RoutePlayer(parsed);
@@ -272,7 +277,7 @@ public class TrailBridgeService extends Service
     /** @param persist merken, dass die Route aktiv ist (ueberlebt einen Neustart des Dienstes) */
     private void startNavigation(boolean persist) {
         if (route == null) return;
-        navigator = new RouteNavigator(route);
+        navigator = new RouteNavigator(route, RouteTexts.of(this));
         if (playbackActive && player != null) {
             navigator.seekTo(player.distanceM());
         }
@@ -453,26 +458,33 @@ public class TrailBridgeService extends Service
     }
 
     private void notifyRoute(String text) {
-        if (uiListener != null) uiListener.onRouteChanged(text, navigator != null);
+        notifyRoute(text, false);
     }
 
-    private static String summarize(GpxRoute r) {
-        StringBuilder b = new StringBuilder(r.name.isEmpty() ? "Route" : r.name);
-        b.append(String.format(Locale.GERMANY, ": %.1f km", r.totalM / 1000));
-        if (r.hasElevation()) b.append(", ").append(r.totalAscentM()).append(" Hm aufwärts");
+    private void notifyRoute(String text, boolean error) {
+        if (uiListener != null) uiListener.onRouteChanged(text, navigator != null, error);
+    }
+
+    private String summarize(GpxRoute r) {
+        Locale locale = Locale.getDefault();
+        StringBuilder b = new StringBuilder(getString(R.string.summary_head,
+                r.name.isEmpty() ? getString(R.string.route_default_name) : r.name,
+                String.format(locale, "%.1f", r.totalM / 1000)));
+        if (r.hasElevation()) b.append(getString(R.string.summary_ascent, r.totalAscentM()));
         if (!r.waypoints.isEmpty()) {
-            b.append(", ").append(r.waypoints.size()).append(r.waypoints.size() == 1 ? " Wegpunkt" : " Wegpunkte");
+            b.append(getResources().getQuantityString(R.plurals.summary_waypoints,
+                    r.waypoints.size(), r.waypoints.size()));
         }
         RouteTimes times = RouteTimes.of(r);
         if (times != null) {
             // Dann kommt auch die Restzeit aus der Datei statt aus der aktuellen Geschwindigkeit.
             int minutes = (int) Math.round(times.remainingS(0) / 60);
-            b.append(String.format(Locale.GERMANY, ", Fahrzeit laut Datei %d:%02d h", minutes / 60, minutes % 60));
+            b.append(getString(R.string.summary_time, minutes / 60, minutes % 60));
         }
         int turns = r.steps.size() - 2;   // ohne Start und Ziel
-        b.append(", ").append(turns).append(" Manöver (")
-                .append(r.hasRoutingInfo ? "aus der Datei)" : "aus der Track-Geometrie)");
-        if (!r.hasElevation()) b.append(", keine Höhendaten");
+        b.append(getResources().getQuantityString(r.hasRoutingInfo ? R.plurals.summary_maneuvers_file
+                : R.plurals.summary_maneuvers_track, turns, turns));
+        if (!r.hasElevation()) b.append(getString(R.string.summary_no_elevation));
         return b.toString();
     }
 
@@ -490,7 +502,7 @@ public class TrailBridgeService extends Service
         boolean wasActive = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean(PREF_ROUTE_ACTIVE, false);
         worker.execute(() -> {
             try (FileInputStream in = new FileInputStream(f)) {
-                GpxRoute parsed = GpxParser.parse(in, "Route");
+                GpxRoute parsed = GpxParser.parse(in, getString(R.string.route_default_name));
                 String summary = summarize(parsed);
                 RoutePlayer parsedPlayer = new RoutePlayer(parsed);
                 mainHandler.post(() -> {
@@ -503,7 +515,7 @@ public class TrailBridgeService extends Service
                     }
                 });
             } catch (GpxParser.GpxException | IOException e) {
-                Log.w(TAG, "Gespeicherte Route nicht lesbar", e);
+                Log.w(TAG, "Saved route not readable", e);
             }
         });
     }
@@ -520,9 +532,9 @@ public class TrailBridgeService extends Service
             overviewRevision = overviewRevision % 255 + 1;
             byte[] overview = OverviewFrameEncoder.encode(nav.overview(), overviewRevision);
             gattServer.updateOverview(overview);
-            Log.i(TAG, "Streckenübersicht Revision " + overviewRevision + ": "
-                    + nav.overview().waypointsAhead().size() + " Wegpunkte, "
-                    + nav.overview().climbsAhead().size() + " Anstiege voraus, " + overview.length + " Byte");
+            Log.i(TAG, "Route overview revision " + overviewRevision + ": "
+                    + nav.overview().waypointsAhead().size() + " waypoints, "
+                    + nav.overview().climbsAhead().size() + " climbs ahead, " + overview.length + " bytes");
         }
         NavState navState = r.nav.withOverviewRevision(overviewRevision);
         lastNavState = navState;
@@ -542,9 +554,10 @@ public class TrailBridgeService extends Service
     // ---- OsmAndLink.Listener ----
 
     @Override
-    public void onStatusChanged(String status) {
+    public void onStatusChanged(String status, OsmAndLink.Status kind) {
         lastStatus = status;
-        if (uiListener != null) uiListener.onStatusChanged(status);
+        lastStatusKind = kind;
+        if (uiListener != null) uiListener.onStatusChanged(status, kind);
     }
 
     @Override
@@ -596,8 +609,8 @@ public class TrailBridgeService extends Service
 
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID, "TrailBridge aktiv", NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Zeigt an, dass TrailBridge im Hintergrund Navigations- und GPS-Daten an den BikeComputer weiterleitet.");
+                CHANNEL_ID, getString(R.string.notif_channel_name), NotificationManager.IMPORTANCE_LOW);
+        channel.setDescription(getString(R.string.notif_channel_desc));
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(channel);
     }
@@ -608,11 +621,11 @@ public class TrailBridgeService extends Service
                 this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE);
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("TrailBridge aktiv")
-                .setContentText("Leitet OsmAnd-Navigation und GPS-Position per BLE an den BikeComputer weiter")
+                .setContentTitle(getString(R.string.notif_title))
+                .setContentText(getString(R.string.notif_text))
                 .setSmallIcon(R.drawable.ic_notification)
                 .setOngoing(true)
-                .addAction(0, "Beenden", stopPendingIntent)
+                .addAction(0, getString(R.string.notif_stop), stopPendingIntent)
                 .build();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

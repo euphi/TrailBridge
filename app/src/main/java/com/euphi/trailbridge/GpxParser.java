@@ -45,13 +45,22 @@ import javax.xml.parsers.SAXParserFactory;
  */
 public final class GpxParser {
 
+    /**
+     * The message is English (log, tests); the UI shows {@link #localized} instead,
+     * built from the string resource and, if there is one, the parser's detail text.
+     */
     public static class GpxException extends Exception {
-        public GpxException(String message, Throwable cause) {
-            super(message, cause);
+        final int resId;
+        @androidx.annotation.Nullable final String detail;
+
+        GpxException(int resId, String englishMessage, @androidx.annotation.Nullable String detail, Throwable cause) {
+            super(englishMessage, cause);
+            this.resId = resId;
+            this.detail = detail;
         }
 
-        public GpxException(String message) {
-            super(message);
+        public String localized(android.content.Context context) {
+            return detail == null ? context.getString(resId) : context.getString(resId, detail);
         }
     }
 
@@ -78,7 +87,7 @@ public final class GpxParser {
             }
             f.newSAXParser().parse(new InputSource(in), h);
         } catch (ParserConfigurationException | SAXException | IOException e) {
-            throw new GpxException("Keine gültige GPX-Datei: " + e.getMessage(), e);
+            throw new GpxException(R.string.gpx_invalid, "Not a valid GPX file: " + e.getMessage(), e.getMessage(), e);
         }
         return h.build(fallbackName);
     }
@@ -246,7 +255,7 @@ public final class GpxParser {
         GpxRoute build(String fallbackName) throws GpxException {
             List<Pt> geometry = trk.size() >= 2 ? trk : rte;
             if (geometry.size() < 2) {
-                throw new GpxException("Die GPX-Datei enthält keine Route oder keinen Track (mind. 2 Punkte).");
+                throw new GpxException(R.string.gpx_empty, "The GPX file contains no route or track (at least 2 points).", null, null);
             }
             int n = geometry.size();
             double[] lat = new double[n];

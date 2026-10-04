@@ -72,8 +72,11 @@ public class OsmAndLink {
      */
     private static final long NONE_DEBOUNCE_MS = 2500L;
 
+    /** What the status text means -- the UI colours its dot by this, not by parsing the text. */
+    public enum Status { IDLE, CONNECTED, ATTENTION, ERROR }
+
     public interface Listener {
-        void onStatusChanged(String status);
+        void onStatusChanged(String status, Status kind);
 
         void onNavState(NavState state);
     }
@@ -104,17 +107,16 @@ public class OsmAndLink {
     public void start() {
         String pkg = findInstalledOsmAnd();
         if (pkg == null) {
-            setStatus("OsmAnd nicht gefunden (net.osmand.plus / net.osmand / net.osmand.dev)."
-                    + " Ist es installiert und in AndroidManifest <queries> eingetragen?");
+            setStatus(Status.ERROR, appContext.getString(R.string.osmand_not_found));
             return;
         }
         Intent intent = new Intent(SERVICE_ACTION);
         intent.setPackage(pkg);
         boolean ok = appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE);
         if (!ok) {
-            setStatus(pkg + " gefunden, aber bindService() abgelehnt.");
+            setStatus(Status.ERROR, appContext.getString(R.string.osmand_bind_refused, pkg));
         } else {
-            setStatus("verbinde mit " + pkg + " ...");
+            setStatus(Status.ATTENTION, appContext.getString(R.string.osmand_connecting, pkg));
         }
     }
 
@@ -160,7 +162,7 @@ public class OsmAndLink {
             subscribed = false;
             iface = null;
             mainHandler.removeCallbacks(pollTask);
-            setStatus("OsmAnd-Verbindung verloren (App beendet/aktualisiert?)");
+            setStatus(Status.ERROR, appContext.getString(R.string.osmand_lost));
         }
     };
 
@@ -174,19 +176,18 @@ public class OsmAndLink {
             long id = i.registerForNavigationUpdates(params, callback);
             subscribed = id >= 0;
             if (subscribed) {
-                setStatus("verbunden, warte auf Navigationsdaten");
+                setStatus(Status.CONNECTED, appContext.getString(R.string.osmand_connected_waiting));
                 mainHandler.removeCallbacks(pollTask);
                 mainHandler.post(pollTask);
             } else {
                 // This is the expected result on first contact -- see class
                 // javadoc: OsmAnd registers unknown callers as disabled.
-                setStatus("NICHT FREIGESCHALTET -- in OsmAnd: Menü > Plugins > "
-                        + "TrailBridge > aktivieren, dann diese App neu starten");
+                setStatus(Status.ATTENTION, appContext.getString(R.string.osmand_not_enabled));
             }
         } catch (Exception e) {
             subscribed = false;
             Log.w(TAG, "registerForNavigationUpdates failed", e);
-            setStatus("Fehler beim Registrieren: " + e.getMessage());
+            setStatus(Status.ERROR, appContext.getString(R.string.osmand_register_error, e.getMessage()));
         }
     }
 
@@ -337,10 +338,10 @@ public class OsmAndLink {
         }
     }
 
-    private void setStatus(String status) {
+    private void setStatus(Status kind, String status) {
         Log.i(TAG, status);
         if (listener != null) {
-            mainHandler.post(() -> listener.onStatusChanged(status));
+            mainHandler.post(() -> listener.onStatusChanged(status, kind));
         }
     }
 

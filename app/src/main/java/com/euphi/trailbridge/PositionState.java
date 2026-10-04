@@ -135,19 +135,19 @@ public final class PositionState {
 
     @Override
     public String toString() {
-        if (!hasFix) return "PositionState{kein Fix}";
+        if (!hasFix) return "PositionState{no fix}";
         StringBuilder s = new StringBuilder("PositionState{")
                 .append(latitudeE7 / 1e7).append(", ").append(longitudeE7 / 1e7);
         if (hasAltitude) s.append(", ").append(altitudeM).append("m");
-        if (hasMslAltitude) s.append(", NHN ").append(mslAltitudeDm / 10.0).append("m");
+        if (hasMslAltitude) s.append(", MSL ").append(mslAltitudeDm / 10.0).append("m");
         if (hasSpeed) s.append(", ").append(speedCms / 100.0).append("m/s");
         if (hasBearing) s.append(", ").append(bearingDegX100 / 100.0).append("°");
         if (hasAccuracy) s.append(", ±").append(accuracyMx10 / 10.0).append("m");
         if (hasHeartRate) s.append(", ").append(heartRateBpm).append("bpm");
         if (hasCadence) s.append(", ").append(cadenceRpm).append("rpm");
         if (hasPower) s.append(", ").append(powerW).append("W");
-        if (hasBaroHeight) s.append(", Höhe ").append(baroHeightDm / 10.0).append("m");
-        if (simFlags != 0) s.append(", SIMULIERT");
+        if (hasBaroHeight) s.append(", baro height ").append(baroHeightDm / 10.0).append("m");
+        if (simFlags != 0) s.append(", SIMULATED");
         return s.append("}").toString();
     }
 }

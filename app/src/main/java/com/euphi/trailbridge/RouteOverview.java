@@ -14,9 +14,6 @@ import java.util.List;
  */
 public final class RouteOverview {
 
-    static final String DESTINATION_NAME = "Ziel";
-    /** A waypoint the file gives no name is called this plus its number among the route's waypoints. */
-    static final String UNNAMED_PREFIX = "Wegpunkt ";
 
     /** A place with its position as the route's remaining distance there. */
     public static final class Waypoint {
@@ -70,10 +67,15 @@ public final class RouteOverview {
      * @param times       the file's timeline, null if it has no time stamps
      */
     RouteOverview(GpxRoute route, List<ElevationProfile.Climb> routeClimbs, RouteTimes times) {
-        destination = new Waypoint(DESTINATION_NAME, route.totalM, route, times, true);
+        this(route, routeClimbs, times, RouteTexts.DEFAULT);
+    }
+
+    /** @param texts names for the destination and for waypoints the file gives no name */
+    RouteOverview(GpxRoute route, List<ElevationProfile.Climb> routeClimbs, RouteTimes times, RouteTexts texts) {
+        destination = new Waypoint(texts.destination, route.totalM, route, times, true);
         for (int i = 0; i < route.waypoints.size(); i++) {
             GpxRoute.Waypoint w = route.waypoints.get(i);
-            String name = w.name.isEmpty() ? UNNAMED_PREFIX + (i + 1) : w.name;
+            String name = w.name.isEmpty() ? texts.unnamedWaypoint(i + 1) : w.name;
             waypoints.add(new Waypoint(name, w.distM, route, times, false));
         }
         for (int i = 0; i < routeClimbs.size(); i++) {

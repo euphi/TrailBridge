@@ -216,7 +216,7 @@ public class RouteProfileView extends View {
                     left - 10 * dp, bottom, textPaint);
         } else {
             textPaint.setTextAlign(Paint.Align.LEFT);
-            c.drawText("keine Höhendaten", left + 4 * dp, bottom - 6 * dp, textPaint);
+            c.drawText(getContext().getString(R.string.profile_no_height), left + 4 * dp, bottom - 6 * dp, textPaint);
         }
 
         // Manoeuvres: a thin line through the profile and a dot on top.

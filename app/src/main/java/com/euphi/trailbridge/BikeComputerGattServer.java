@@ -169,13 +169,13 @@ public class BikeComputerGattServer {
             }
             advertiser = adapter.getBluetoothLeAdvertiser();
             if (advertiser == null) {
-                fail("Dieses Gerät unterstützt keine BLE-Peripheral-Rolle (kein Advertiser).");
+                fail(context.getString(R.string.ble_no_peripheral));
                 return;
             }
 
             gattServer = bluetoothManager.openGattServer(context, gattServerCallback);
             if (gattServer == null) {
-                fail("openGattServer() ist fehlgeschlagen.");
+                fail(context.getString(R.string.ble_gatt_open_failed));
                 return;
             }
 
@@ -197,7 +197,7 @@ public class BikeComputerGattServer {
             gattServer.addService(navService);
         } catch (SecurityException e) {
             // Missing BLUETOOTH_ADVERTISE/CONNECT at runtime on API 31+.
-            fail("Fehlende Bluetooth-Berechtigung: " + e.getMessage());
+            fail(context.getString(R.string.ble_permission_missing, e.getMessage()));
         }
     }
 
@@ -208,7 +208,7 @@ public class BikeComputerGattServer {
         try {
             gattServer.addService(positionService);
         } catch (SecurityException e) {
-            fail("addService (Position) fehlgeschlagen: " + e.getMessage());
+            fail(context.getString(R.string.ble_add_service_failed, "position", e.getMessage()));
         }
     }
 
@@ -219,7 +219,7 @@ public class BikeComputerGattServer {
         try {
             gattServer.addService(profileService);
         } catch (SecurityException e) {
-            fail("addService (Profil) fehlgeschlagen: " + e.getMessage());
+            fail(context.getString(R.string.ble_add_service_failed, "profile", e.getMessage()));
         }
     }
 
@@ -233,7 +233,7 @@ public class BikeComputerGattServer {
         try {
             gattServer.addService(overviewService);
         } catch (SecurityException e) {
-            fail("addService (Übersicht) fehlgeschlagen: " + e.getMessage());
+            fail(context.getString(R.string.ble_add_service_failed, "overview", e.getMessage()));
         }
     }
 
@@ -261,7 +261,7 @@ public class BikeComputerGattServer {
         try {
             advertiser.startAdvertising(settings, data, scanResponse, advertiseCallback);
         } catch (SecurityException e) {
-            fail("startAdvertising fehlgeschlagen: " + e.getMessage());
+            fail(context.getString(R.string.ble_advertise_failed, e.getMessage()));
             return;
         }
         mainHandler.postDelayed(navChannel.heartbeat, HEARTBEAT_INTERVAL_MS);
@@ -482,7 +482,7 @@ public class BikeComputerGattServer {
         @Override
         public void onServiceAdded(int status, BluetoothGattService service) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                fail("addService fehlgeschlagen für " + service.getUuid() + ", Status " + status);
+                fail(context.getString(R.string.ble_add_service_failed_uuid, service.getUuid(), status));
                 return;
             }
             if (SERVICE_UUID.equals(service.getUuid())) {
@@ -590,7 +590,7 @@ public class BikeComputerGattServer {
     private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
         @Override
         public void onStartFailure(int errorCode) {
-            fail("Advertising fehlgeschlagen, Fehlercode " + errorCode);
+            fail(context.getString(R.string.ble_advertise_failed_code, errorCode));
         }
     };
 }

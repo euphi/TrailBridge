@@ -100,6 +100,18 @@ für TrailBridge liegt hier, nicht im BikeComputer-Repo (dessen
   bestehende Verbindungslogik in `BLEDevices.cpp` für die anderen
   Sensoren (HR, CSC, Forumslader).
 
+## Sprachen & Berechtigungen
+
+- UI-Texte stehen ausschließlich in `res/values/strings.xml` (Englisch,
+  Default) und `res/values-de/strings.xml` (Deutsch, wenn das Handy auf
+  Deutsch steht) -- keine Texte im Java-Code oder Layout, beide Dateien
+  gleichzeitig pflegen. Statusarten werden nicht am Text erkannt
+  (`OsmAndLink.Status`), Texte für den BikeComputer kommen über `RouteTexts`.
+- Pflicht zum Start sind nur die Bluetooth-Berechtigungen (ab API 31).
+  Standort (nur GPS/GPX-Navigation) und Benachrichtigungen sind optional;
+  `TrailBridgeService.onStartCommand` startet `GpsLink` nach, sobald der
+  Standort erteilt ist.
+
 ## Lizenz & F-Droid
 
 Lizenz ist GPL-3.0-or-later (vorher MIT) -- zwingend, weil die

@@ -14,7 +14,7 @@ die Firmware muss den neuen Teil auswerten. Beides nur gemeinsam ändern.
 |---|---|
 | Navigation aus OsmAnd (Manöver, Straßennamen, Fahrspuren, Restdistanz und -zeit) | gefahren, in v0.4.4 |
 | GPS-Position und Uhrzeit für den BikeComputer | in v0.4.4; das Stellen der Uhr wurde nicht einzeln geprüft |
-| GPX-Navigation, Höhenprofil der Anstiege, Testfahrt, Navi-Modus, Moduswahl | in der Vorabversion v0.5.0-rc1; nur mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch keine echte Fahrt |
+| GPX-Navigation, Höhenprofil der Anstiege, Testfahrt, Navi-Modus, Moduswahl | in der Vorabversion v0.5.0-rc2; nur mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch keine echte Fahrt |
 | Höhenprofil der Strecke voraus als rollendes Fenster (auch flach und bergab), Anstieg darin mit ganzer Ausdehnung angesagt | auf `main`, noch in keinem Release |
 | Höhe über dem Meeresspiegel im Positions-Frame (`MSL_ALTITUDE_DM`, Android 14+) | auf `main`, noch in keinem Release |
 | Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | App-Seite auf `main`, noch in keinem Release, nur mit Unit-Tests geprüft; die Firmware wertet sie noch nicht aus, siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |

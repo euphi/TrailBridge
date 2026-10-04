@@ -61,7 +61,7 @@ public class NaviActivity extends AppCompatActivity implements TrailBridgeServic
         // Normally the main screen has asked for the permissions and started the service
         // before it brought us here; if that is no longer true (revoked, process restart),
         // hand back to it.
-        if (!MainActivity.missingPermissions(this).isEmpty()) {
+        if (!MainActivity.missingRequiredPermissions(this).isEmpty()) {
             finish();
             return;
         }
@@ -148,7 +148,7 @@ public class NaviActivity extends AppCompatActivity implements TrailBridgeServic
     }
 
     @Override
-    public void onStatusChanged(String status) {
+    public void onStatusChanged(String status, OsmAndLink.Status kind) {
     }
 
     @Override
@@ -156,7 +156,7 @@ public class NaviActivity extends AppCompatActivity implements TrailBridgeServic
     }
 
     @Override
-    public void onRouteChanged(String summary, boolean active) {
+    public void onRouteChanged(String summary, boolean active, boolean error) {
     }
 
     @Override

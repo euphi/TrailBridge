@@ -22,6 +22,9 @@ public class OverviewFrameEncoderTest {
         return new ElevationProfile.Climb(footM, footM + lengthM, 500, 500 + gainM);
     }
 
+    /** The texts the wire examples below are written with. */
+    private static final RouteTexts GERMAN = new RouteTexts("Abseits der Route", "Ziel", "Wegpunkt %d");
+
     @Test
     public void encodesDocumentedLayout() {
         GpxRoute b = base();
@@ -30,7 +33,7 @@ public class OverviewFrameEncoderTest {
                 new GpxRoute.Waypoint(b.totalM - 12000, ""));
         // the file's time stamps: 5 m/s all the way
         RouteOverview o = new RouteOverview(r, Arrays.asList(climb(2000, 3000, 180), climb(b.totalM - 22000, 8200, 450)),
-                RouteTimes.of(Routes.withTimes(r, d -> d / 5)));
+                RouteTimes.of(Routes.withTimes(r, d -> d / 5)), GERMAN);
         o.update(6000);                                 // past the first climb
         assertArrayEquals(new byte[]{
                 1, 1,                                                       // version, OVERVIEW
@@ -56,7 +59,7 @@ public class OverviewFrameEncoderTest {
     @Test
     public void routeWithoutWaypointsOrClimbsIsJustTheDestination() {
         // no time stamps in the file: the time anchor says "unknown"
-        RouteOverview o = new RouteOverview(base(), Collections.<ElevationProfile.Climb>emptyList(), null);
+        RouteOverview o = new RouteOverview(base(), Collections.<ElevationProfile.Climb>emptyList(), null, GERMAN);
         assertArrayEquals(new byte[]{1, 1, 1, 1, 7, 2, 1, 0, 3, 1, 0,
                         4, 13, 1, 0, 0, 0, 0, -1, -1, -1, -1, 'Z', 'i', 'e', 'l'},
                 OverviewFrameEncoder.encode(o, 7));
@@ -72,7 +75,7 @@ public class OverviewFrameEncoderTest {
         }
         List<ElevationProfile.Climb> climbs = new ArrayList<>();
         climbs.add(climb(1500, 400, 30));
-        RouteOverview o = new RouteOverview(Routes.withWaypoints(b, wps), climbs, null);
+        RouteOverview o = new RouteOverview(Routes.withWaypoints(b, wps), climbs, null, GERMAN);
         byte[] f = OverviewFrameEncoder.encode(o, 1);
         assertTrue(f.length <= 512);
 

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TrailBridge</string>
+    <string name="header_sub">OsmAnd · BikeComputer</string>
+    <string name="status_initial">Starte …</string>
+    <string name="navstate_initial">(noch keine Navigationsdaten)</string>
+    <string name="retry_button">Erneut versuchen</string>
+    <string name="ble_status_initial">BLE: startet …</string>
+    <string name="position_initial">(noch keine GPS-Daten)</string>
+    <string name="gpx_load_button">GPX laden</string>
+    <string name="route_start">Route starten</string>
+    <string name="route_stop">Route beenden</string>
+    <string name="test_button">Testfahrt</string>
+    <string name="emulate_hr">Puls emulieren</string>
+    <string name="emulate_cad">Trittfrequenz emulieren</string>
+    <string name="emulate_power">Leistung emulieren</string>
+    <string name="prev_maneuver">« Manöver</string>
+    <string name="next_maneuver">Manöver »</string>
+    <string name="play">Abspielen</string>
+    <string name="pause">Pause</string>
+    <string name="replay">Nochmal</string>
+    <string name="stop">Stopp</string>
+    <string name="route_none">(keine GPX-Route geladen)</string>
+
+    <!-- Kartenköpfe (werden per textAllCaps in Versalien gesetzt) -->
+    <string name="card_connection">Verbindung</string>
+    <string name="card_route">Route</string>
+    <string name="card_test">Testfahrt</string>
+    <string name="card_position">Position</string>
+    <string name="card_navigation">Navigation</string>
+    <string name="card_raw">Rohdaten</string>
+    <string name="card_mode">Moduswahl</string>
+    <string name="mode_osmand">OsmAnd</string>
+    <string name="mode_gpx_nav">GPS/GPX-Navigation</string>
+    <string name="mode_simulation">GPX-Simulation</string>
+    <string name="mode_all">All-in-one</string>
+    <string name="mode_hint_osmand">Die Navigation kommt aus OsmAnd.</string>
+    <string name="mode_hint_gpx_nav">TrailBridge navigiert selbst: GPX-Route und echte GPS-Position.</string>
+    <string name="mode_hint_simulation">Die geladene GPX-Route wird als Testfahrt abgespielt, mit simulierter Position.</string>
+    <string name="mode_hint_all">Alles auf einem Screen: OsmAnd, GPX-Navigation und Simulation.</string>
+    <string name="card_profile">Höhenprofil</string>
+    <string name="navi_button">Navi-Modus</string>
+    <string name="navi_title">Navi</string>
+    <string name="navi_close">Beenden</string>
+    <string name="label_osmand">OsmAnd</string>
+    <string name="label_ble">BLE</string>
+    <string name="sim_chip">Simuliert</string>
+    <string name="gps_none">kein Fix</string>
+    <string name="footer_version">TrailBridge %1$s · GPL-3.0</string>
+
+    <string name="dash">–</string>
+    <string name="unit_kmh">km/h</string>
+    <string name="unit_m">m</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_rpm">rpm</string>
+
+    <!-- Navigationskarte -->
+    <string name="nav_none">Keine Navigation</string>
+    <string name="nav_then">danach: %1$s in %2$s</string>
+    <string name="nav_remaining">Ziel: %1$s · %2$s</string>
+    <string name="maneuver_depart">Start</string>
+    <string name="maneuver_arrive">Ziel</string>
+    <string name="maneuver_straight">Geradeaus</string>
+    <string name="maneuver_slight_left">Leicht links</string>
+    <string name="maneuver_left">Links abbiegen</string>
+    <string name="maneuver_sharp_left">Scharf links</string>
+    <string name="maneuver_slight_right">Leicht rechts</string>
+    <string name="maneuver_right">Rechts abbiegen</string>
+    <string name="maneuver_sharp_right">Scharf rechts</string>
+    <string name="maneuver_keep_left">Links halten</string>
+    <string name="maneuver_keep_right">Rechts halten</string>
+    <string name="maneuver_uturn">Wenden</string>
+    <string name="maneuver_roundabout">Kreisverkehr</string>
+    <string name="maneuver_roundabout_exit">Kreisverkehr, %1$d. Ausfahrt</string>
+    <string name="maneuver_unknown">Weiter</string>
+
+    <!-- Status, Fehler und Meldungen aus dem Code -->
+    <string name="osmand_not_found">OsmAnd nicht gefunden (net.osmand.plus / net.osmand / net.osmand.dev). Ist es installiert?</string>
+    <string name="osmand_bind_refused">%1$s gefunden, aber bindService() abgelehnt.</string>
+    <string name="osmand_connecting">verbinde mit %1$s …</string>
+    <string name="osmand_connected_waiting">verbunden, warte auf Navigationsdaten</string>
+    <string name="osmand_not_enabled">NICHT FREIGESCHALTET -- in OsmAnd: Menü > Plugins > TrailBridge > aktivieren, dann diese App neu starten</string>
+    <string name="osmand_lost">OsmAnd-Verbindung verloren (App beendet/aktualisiert?)</string>
+    <string name="osmand_register_error">Fehler beim Registrieren: %1$s</string>
+
+    <string name="gps_permission_missing">GPS: Standortberechtigung nicht erteilt</string>
+    <string name="gps_no_manager">GPS: kein LocationManager auf diesem Gerät</string>
+    <string name="gps_waiting_fix">GPS: warte auf ersten Fix</string>
+    <string name="gps_provider_off">GPS: Ortungsdienst (GPS) ist deaktiviert</string>
+    <string name="gps_permission_denied">GPS: Berechtigung verweigert: %1$s</string>
+    <string name="gps_no_provider">GPS: kein GPS-Provider auf diesem Gerät</string>
+    <string name="gps_provider_enabled">GPS: Ortungsdienst aktiviert, warte auf Fix</string>
+    <string name="gps_provider_disabled">GPS: Ortungsdienst deaktiviert</string>
+
+    <string name="notifications_off_hint">Benachrichtigungen sind aus: Die Weitergabe läuft trotzdem im Hintergrund, nur ohne Status-Benachrichtigung und deren Beenden-Button. Beenden geht über die Liste aktiver Apps in Android.</string>
+    <string name="ble_permission_denied">Bluetooth-Berechtigung verweigert -- die Navigationsweitergabe kann nicht starten.</string>
+    <plurals name="ble_advertising">
+        <item quantity="one">BLE: Advertising, %d Abonnent</item>
+        <item quantity="other">BLE: Advertising, %d Abonnenten</item>
+    </plurals>
+    <string name="ble_error">BLE-Fehler: %1$s</string>
+    <string name="ble_no_peripheral">Dieses Gerät unterstützt keine BLE-Peripheral-Rolle (kein Advertiser).</string>
+    <string name="ble_gatt_open_failed">openGattServer() ist fehlgeschlagen.</string>
+    <string name="ble_permission_missing">Fehlende Bluetooth-Berechtigung: %1$s</string>
+    <string name="ble_add_service_failed">addService (%1$s) fehlgeschlagen: %2$s</string>
+    <string name="ble_add_service_failed_uuid">addService fehlgeschlagen für %1$s, Status %2$d</string>
+    <string name="ble_advertise_failed">startAdvertising fehlgeschlagen: %1$s</string>
+    <string name="ble_advertise_failed_code">Advertising fehlgeschlagen, Fehlercode %1$d</string>
+
+    <string name="gpx_read_failed">GPX konnte nicht gelesen werden: %1$s</string>
+    <string name="gpx_unreadable">Datei nicht lesbar</string>
+    <string name="gpx_too_large">Datei größer als 20 MB</string>
+    <string name="gpx_import_failed">GPX-Import fehlgeschlagen: %1$s</string>
+    <string name="gpx_invalid">Keine gültige GPX-Datei: %1$s</string>
+    <string name="gpx_empty">Die GPX-Datei enthält keine Route oder keinen Track (mind. 2 Punkte).</string>
+    <string name="route_default_name">Route</string>
+    <string name="summary_head">%1$s: %2$s km</string>
+    <string name="summary_ascent">, %1$d Hm aufwärts</string>
+    <plurals name="summary_waypoints">
+        <item quantity="one">, %d Wegpunkt</item>
+        <item quantity="other">, %d Wegpunkte</item>
+    </plurals>
+    <string name="summary_time">, Fahrzeit laut Datei %1$d:%2$02d h</string>
+    <plurals name="summary_maneuvers_file">
+        <item quantity="one">, %d Manöver (aus der Datei)</item>
+        <item quantity="other">, %d Manöver (aus der Datei)</item>
+    </plurals>
+    <plurals name="summary_maneuvers_track">
+        <item quantity="one">, %d Manöver (aus der Track-Geometrie)</item>
+        <item quantity="other">, %d Manöver (aus der Track-Geometrie)</item>
+    </plurals>
+    <string name="summary_no_elevation">, keine Höhendaten</string>
+    <string name="profile_no_height">keine Höhendaten</string>
+
+    <string name="notif_channel_name">TrailBridge aktiv</string>
+    <string name="notif_channel_desc">Zeigt an, dass TrailBridge im Hintergrund Navigations- und GPS-Daten an den BikeComputer weiterleitet.</string>
+    <string name="notif_title">TrailBridge aktiv</string>
+    <string name="notif_text">Leitet OsmAnd-Navigation und GPS-Position per BLE an den BikeComputer weiter</string>
+    <string name="notif_stop">Beenden</string>
+
+    <!-- Testfahrt -->
+    <string name="sensor_info">Geschwindigkeit: %1$s\nPuls: %2$s\nTrittfrequenz: %3$s\nLeistung: %4$s\nHöhe: %5$s</string>
+    <string name="speed_from_gpx">aus den GPX-Zeitstempeln</string>
+    <string name="speed_computed">berechnet (GPX ohne Zeitstempel)</string>
+    <string name="source_gpx">aus der GPX</string>
+    <string name="source_emulated">nicht in der GPX -- emuliert</string>
+    <string name="source_none">nicht in der GPX -- wird nicht gesendet</string>
+    <string name="height_gpx">aus der GPX (Gradient berechnet der BikeComputer selbst)</string>
+    <string name="playback_hr">Puls %1$d</string>
+    <string name="playback_cad">Tf %1$d</string>
+    <string name="playback_finished">Ziel erreicht</string>
+
+    <!-- Texte, die auf dem BikeComputer erscheinen -->
+    <string name="off_route">Abseits der Route</string>
+    <string name="destination_name">Ziel</string>
+    <string name="waypoint_unnamed">Wegpunkt %1$d</string>
+</resources>

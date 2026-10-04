@@ -62,7 +62,7 @@ Was offen und geplant ist, steht in der [Roadmap](ROADMAP.md).
 
 Navigation aus OsmAnd und die GPS-Position laufen Ende-zu-Ende (Version
 0.4.4); die OsmAnd-Navigation ist auf echten Fahrten erprobt. GPX-Navigation, Höhenprofil, Testfahrt, Navi-Modus
-und Moduswahl stecken in der Vorabversion 0.5.0-rc1 und sind bisher nur mit
+und Moduswahl stecken in der Vorabversion 0.5.0-rc2 und sind bisher nur mit
 der Testfahrt und dem Simulator-Build der Firmware getestet. Das rollende
 Höhenprofil und die Streckenübersicht liegen auf `main` und sind noch in
 keinem Release. APKs: siehe

@@ -15,7 +15,7 @@ android {
         // neue Versionen über die Tags und prüft genau diese beiden Werte --
         // vor jedem Release-Tag hier hochzählen, siehe FDROID.md.
         versionCode 500
-        versionName "0.5.0-rc1"
+        versionName "0.5.0-rc2"
     }
 
     // Kein von Google verschlüsselter Abhängigkeits-Blob in der APK -- F-Droid

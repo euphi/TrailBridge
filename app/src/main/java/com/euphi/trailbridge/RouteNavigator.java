@@ -68,12 +68,19 @@ public final class RouteNavigator {
     private final RouteOverview overview;
     private boolean overviewDirty = true;   // nothing published yet
 
+    private final RouteTexts texts;
+
     public RouteNavigator(GpxRoute route) {
+        this(route, RouteTexts.DEFAULT);
+    }
+
+    public RouteNavigator(GpxRoute route, RouteTexts texts) {
         this.route = route;
+        this.texts = texts;
         this.elevation = ElevationProfile.of(route);
         this.climbs = elevation == null ? Collections.<ElevationProfile.Climb>emptyList() : elevation.climbs();
         this.times = RouteTimes.of(route);
-        this.overview = new RouteOverview(route, climbs, times);
+        this.overview = new RouteOverview(route, climbs, times, texts);
     }
 
     public GpxRoute route() {
@@ -284,7 +291,7 @@ public final class RouteNavigator {
 
     private NavState offRouteState(int distToRouteM) {
         int remaining = (int) Math.round(Math.max(0, route.totalM - progressM));
-        return new NavState(true, Maneuver.UNKNOWN, distToRouteM, 0, "Abseits der Route",
+        return new NavState(true, Maneuver.UNKNOWN, distToRouteM, 0, texts.offRoute,
                 Collections.<Lane>emptyList(), 0, Maneuver.NONE, 0, "",
                 Collections.<Lane>emptyList(), 0, remaining, remainingTimeS(remaining));
     }

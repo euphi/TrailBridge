@@ -36,23 +36,28 @@ public class GpsLink {
     private LocationManager locationManager;
     private boolean requested = false;
 
+    /** Whether location updates are currently requested. */
+    public boolean isRunning() {
+        return requested;
+    }
+
     public GpsLink(Context context, Listener listener) {
         this.appContext = context.getApplicationContext();
         this.listener = listener;
     }
 
-    /** Requires ACCESS_FINE_LOCATION to already be granted -- caller (see
-     *  MainActivity) must have requested it first, same pattern as the
-     *  Bluetooth permissions before BikeComputerGattServer.start(). */
+    /** Needs ACCESS_FINE_LOCATION: without it this only sets a status text, and
+     *  the caller (TrailBridgeService.startGps) tries again once it is granted. */
     public void start() {
+        if (requested) return;
         if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            setStatus("GPS: Berechtigung fehlt (ACCESS_FINE_LOCATION)");
+            setStatus(appContext.getString(R.string.gps_permission_missing));
             return;
         }
         locationManager = (LocationManager) appContext.getSystemService(Context.LOCATION_SERVICE);
         if (locationManager == null) {
-            setStatus("GPS: kein LocationManager auf diesem Gerät");
+            setStatus(appContext.getString(R.string.gps_no_manager));
             return;
         }
         try {
@@ -61,12 +66,12 @@ public class GpsLink {
                     locationListener, Looper.getMainLooper());
             requested = true;
             setStatus(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-                    ? "GPS: warte auf ersten Fix"
-                    : "GPS: Ortungsdienst (GPS) ist deaktiviert");
+                    ? appContext.getString(R.string.gps_waiting_fix)
+                    : appContext.getString(R.string.gps_provider_off));
         } catch (SecurityException e) {
-            setStatus("GPS: Berechtigung verweigert: " + e.getMessage());
+            setStatus(appContext.getString(R.string.gps_permission_denied, e.getMessage()));
         } catch (IllegalArgumentException e) {
-            setStatus("GPS: kein GPS-Provider auf diesem Gerät");
+            setStatus(appContext.getString(R.string.gps_no_provider));
         }
     }
 
@@ -96,12 +101,12 @@ public class GpsLink {
 
         @Override
         public void onProviderEnabled(String provider) {
-            setStatus("GPS: Ortungsdienst aktiviert, warte auf Fix");
+            setStatus(appContext.getString(R.string.gps_provider_enabled));
         }
 
         @Override
         public void onProviderDisabled(String provider) {
-            setStatus("GPS: Ortungsdienst deaktiviert");
+            setStatus(appContext.getString(R.string.gps_provider_disabled));
             listener.onPositionUpdate(PositionState.NONE);
         }
     };

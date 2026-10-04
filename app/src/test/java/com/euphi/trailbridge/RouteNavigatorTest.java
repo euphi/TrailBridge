@@ -195,7 +195,7 @@ public class RouteNavigatorTest {
         assertFalse(fixAlong(n, 400).overviewChanged);
 
         assertTrue(fixAlong(n, 810).overviewChanged);              // waypoint reached
-        assertEquals("Wegpunkt 2", n.overview().waypointsAhead().get(0).name);
+        assertEquals("Waypoint 2", n.overview().waypointsAhead().get(0).name);
         assertFalse(fixAlong(n, 790).overviewChanged);             // GPS jitter does not bring it back
 
         boolean changed = false;                                   // riding over the summit at 1600 m
