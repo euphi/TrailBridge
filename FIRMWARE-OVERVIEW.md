@@ -1,16 +1,19 @@
-# Streckenübersicht: was der BikeComputer dafür braucht
+# Streckenübersicht: die Seite des BikeComputers
 
-Vorlage für die Firmware-Seite der Streckenübersicht. Die App-Seite ist fertig (auf
-`main`, noch in keinem Release); an der Firmware ist nichts geändert. Das Wire-Format
+Referenz für die Firmware-Seite der Streckenübersicht. Entstanden als Vorlage, inzwischen
+ist sie umgesetzt: im Repo `TRGB-BikeComputer` auf dem Branch `claude/route-overview`
+(Commits `43ecfa1` Code, `2374ffe` Doku; Stand 2026-10-08 noch nicht in `main` und am
+Gerät ungetestet). Die App-Seite liegt auf `main`, noch in keinem Release. Das Wire-Format
 steht verbindlich in [PROTOCOL.md](PROTOCOL.md), Abschnitt "Streckenübersicht-Service"
--- hier steht, was daraus für `TRGB-BikeComputer` folgt.
+-- hier steht, was daraus für die Firmware folgt und wie sie es macht. Was der Fahrer
+davon sieht, beschreibt `doc/ROUTE.md` (deutsch `ROUTE.de.md`) im BikeComputer-Repo.
 
 ## Was ankommt
 
 Solange TrailBridge eine GPX-Route abspielt (echt oder als Testfahrt):
 
-- In jedem Nav-Frame ein neuer Tag `OVERVIEW_REVISION` (0x0E, 1 Byte). Die heutige
-  Firmware überspringt ihn als unbekannten Tag.
+- In jedem Nav-Frame ein neuer Tag `OVERVIEW_REVISION` (0x0E, 1 Byte). Eine
+  Firmware ohne Streckenübersicht überspringt ihn als unbekannten Tag.
 - Ein vierter Service mit einer Characteristic, die sich nur lesen lässt. Ihr Wert ist
   die Übersicht: das Ziel, die Wegpunkte voraus (Name, Restdistanz und Restzeit der
   Route am Wegpunkt) und die Anstiege voraus (Nummer, Höhenmeter, Länge, Restdistanz
@@ -23,22 +26,29 @@ Solange TrailBridge eine GPX-Route abspielt (echt oder als Testfahrt):
 
 Bei Navigation aus OsmAnd fehlt der Tag, und die Characteristic liefert `OVERVIEW_NONE`.
 
-## Was zu bauen ist
+## Was die Firmware macht
 
-1. **Characteristic merken.** In `connectToServer()` nach `subscribeProfile()` den
-   Service über `getService()` suchen, wie dort -- aber ohne `registerForNotify()`, es
-   gibt kein CCCD. Fehlt der Service, ist es eine ältere TrailBridge-Version: melden und
-   weiter.
-2. **Revision aus dem Nav-Frame.** In `handleNavData()` einen Fall `NAV_TAG_OVERVIEW_REVISION`
-   (0x0E) ergänzen. Fehlt der Tag in einem `NAV_UPDATE`, oder kommt `NAV_NONE`: Übersicht
-   verwerfen. Ebenso in `onDisconnect()`.
-3. **Lesen, wenn die Revision eine andere ist** als die der gespeicherten Übersicht.
-   `handleNavData()` läuft im Indicate-Callback, dort blockiert `readValue()` den
-   BLE-Stack. Im Callback also nur vormerken und aus einem eigenen Task lesen, z. B. aus
-   `scanAndConnectTask()`, der auch `connectToServer()` ausführt.
-4. **Frame parsen** (unten) und die `REVISION` aus dem Frame speichern, nicht die aus dem
-   Nav-Frame. Passen die beiden beim nächsten Nav-Frame nicht zusammen, noch einmal lesen.
-5. **Entfernung und Zeit bei jedem Nav-Frame neu rechnen** und anzeigen.
+1. **Characteristic merken.** Nach dem Connect sucht sie den Service, ohne sich
+   anzumelden -- es gibt kein CCCD. Fehlt der Service, ist es eine ältere
+   TrailBridge-Version.
+2. **Revision aus dem Nav-Frame.** `handleNavData()` liest `OVERVIEW_REVISION` (0x0E).
+   Fehlt der Tag in einem Nav-Frame, kommt `NAV_NONE` oder reißt die Verbindung ab,
+   verwirft sie die Übersicht.
+3. **Lesen, wenn die Revision eine andere ist** als die der gehaltenen Übersicht.
+   `handleNavData()` läuft im Indicate-Callback, dort würde `readValue()` den BLE-Stack
+   blockieren. Der Callback merkt den Read also nur vor, gelesen wird in einem eigenen
+   Task (`BLEDevices::overviewReaderTask()`). Schlägt der Read fehl, folgt nach 4 s ein
+   neuer Versuch.
+4. **Frame parsen** (unten, `src/RouteOverview.*`) und die `REVISION` aus dem Frame
+   halten, nicht die aus dem Nav-Frame. Passen die beiden beim nächsten Nav-Frame nicht
+   zusammen, wird noch einmal gelesen.
+5. **Entfernung und Zeit bei jedem Nav-Frame neu rechnen** (`src/RouteMonitor.*`).
+   Zwischen zwei Frames führt der Radsensor die Entfernung weiter; die Zeit bleibt die
+   des letzten Frames.
+6. **Anzeigen** auf dem Screen `RimRidgeRoute` (vom Nav-Screen nach links wischen): das
+   Ziel mit Ankunftszeit, darunter Wegpunkte (Name, Entfernung, Ankunft) und Anstiege
+   (Anstieg n/N, Entfernung zum Fuß oder "noch x km" im Anstieg, Höhenmeter, Länge,
+   mittlere Steigung), jeweils der nächste zuerst.
 
 ### Langer Wert
 
@@ -49,15 +59,15 @@ selbst aneinander (bis 600 Byte). Geprüft im Quelltext, nicht am Gerät.
 
 `setMTU(256)` reicht weiter aus. Mit der MTU 23 würde der Read nur länger dauern.
 
-Der Parser sollte ein abgeschnittenes letztes TLV trotzdem aushalten (Länge über das
-Frame-Ende hinaus: aufhören, das bis dahin Gelesene behalten).
+Ein abgeschnittenes letztes TLV muss der Parser aushalten (Länge über das Frame-Ende
+hinaus: aufhören, das bis dahin Gelesene behalten).
 
 ### Parser
 
 Wie die anderen: Byte 0 Version, Byte 1 Typ, dann TLVs; unbekannte Tags überspringen.
 
 ```cpp
-// Skizze, nicht aus der Firmware
+// Skizze aus der Vorlage, nicht der Code der Firmware
 struct OverviewWaypoint { uint32_t remainingAtM, remainingTimeAtS; bool destination; char name[33]; };
 struct OverviewClimb    { uint8_t number; uint16_t gainM; uint32_t lengthM, footRemainingAtM; };
 
@@ -77,9 +87,8 @@ case 0x05: if (len >= 11) {                            // CLIMB, mehr als 11 Byt
 ```
 
 Der erste `WAYPOINT` ist immer das Ziel. Danach stehen Wegpunkte und Anstiege gemischt,
-jeweils der nächste zuerst. In 512 Byte passen höchstens rund 40 Einträge; feste Felder
-für 24 Wegpunkte und 24 Anstiege (zusammen gut 1 kB) reichen für die Anzeige, was darüber
-hinausgeht, kann der Parser fallen lassen.
+jeweils der nächste zuerst. In 512 Byte passen höchstens rund 40 Einträge; so viele hält
+die Firmware, 24 davon zeigt sie an.
 
 ### Entfernung und Zeit
 
@@ -123,7 +132,8 @@ Entfernungen, und die kommen aus dem Nav-Frame.
 
 Ist die Liste gekürzt (mehr als 512 Byte), zeigt `WAYPOINTS_AHEAD` mehr Wegpunkte an,
 als im Frame stehen; bei den Anstiegen ist die letzte Nummer kleiner als `CLIMBS_TOTAL`.
-Der Rest rückt mit den nächsten Revisionen nach.
+Der Rest rückt mit den nächsten Revisionen nach. Die Firmware zeigt dann in der Fußzeile
+"Liste gekürzt".
 
 ## Testen
 
@@ -138,16 +148,17 @@ Der Rest rückt mit den nächsten Revisionen nach.
 - **Beide Zeit-Wege:** eine GPX mit und eine ohne Zeitstempel. BRouter schreibt sie mit
   `profile:showtime=1` in der Anfrage bzw. `assign showtime = true` im Profil;
   `Tools/gpxenrich` lässt sie bisher weg.
-- Am Gerät noch offen: ob der Long Read über die echte Verbindung so läuft wie im
-  Quelltext gelesen.
+- Am Gerät noch offen: die ganze Firmware-Seite, vor allem ob der Long Read über die
+  echte Verbindung so läuft wie im Quelltext gelesen.
+
+## Noch offen
+
+- Die noch zu fahrenden Höhenmeter -- braucht eine Erweiterung des Protokolls
+  (siehe [ROADMAP.md](ROADMAP.md), "Anstiegsübersicht, der Rest").
+- Ein Hinweis vor einem Wegpunkt (Pop-up) und der Zugang zur Übersicht vom Hauptscreen.
 
 ## Doku im BikeComputer-Repo
 
-Wenn die Firmware-Seite steht, stimmen dort diese Stellen nicht mehr:
-
-- `doc/ROADMAP.md` und `doc/ROADMAP.de.md`: "Wegpunkte in der Navigation" und
-  "Anstiegsübersicht für die ganze Route" nennen als Hindernis, dass TrailBridge keine
-  `wpt` liest und das Protokoll keinen Tag hat. Beides gibt es jetzt. Von der
-  Anstiegsübersicht fehlen weiter die noch zu fahrenden Höhenmeter.
-- `doc/trailbridge/index.md` und `index.de.md`: die Liste "Was die App macht".
-- `doc/trailbridge/PROTOCOL*.md` kommen über `doc/fetch_trailbridge.sh` von hier.
+Mit dem Branch nachgezogen (Commit `2374ffe`): `doc/ROUTE.md` und `ROUTE.de.md`, die
+Roadmap und die TrailBridge-Seite. `doc/trailbridge/PROTOCOL*.md` kommen weiter über
+`doc/fetch_trailbridge.sh` von hier.

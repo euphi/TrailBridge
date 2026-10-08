@@ -17,7 +17,7 @@ die Firmware muss den neuen Teil auswerten. Beides nur gemeinsam ändern.
 | GPX-Navigation, Höhenprofil der Anstiege, Testfahrt, Navi-Modus, Moduswahl | in der Vorabversion v0.5.0-rc2; nur mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch keine echte Fahrt |
 | Höhenprofil der Strecke voraus als rollendes Fenster (auch flach und bergab), Anstieg darin mit ganzer Ausdehnung angesagt | auf `main`, noch in keinem Release |
 | Höhe über dem Meeresspiegel im Positions-Frame (`MSL_ALTITUDE_DM`, Android 14+) | auf `main`, noch in keinem Release |
-| Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | App-Seite auf `main`, noch in keinem Release, nur mit Unit-Tests geprüft; die Firmware wertet sie noch nicht aus, siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
+| Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | App-Seite auf `main`, noch in keinem Release, nur mit Unit-Tests geprüft; die Firmware wertet sie aus und zeigt sie auf einem eigenen Screen (Branch `claude/route-overview` im BikeComputer-Repo, noch nicht in `main`, am Gerät ungetestet), siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
 | F-Droid | im Repo vorbereitet, siehe [FDROID.md](FDROID.md) |
 
 ## Bekannte Fehler
@@ -38,7 +38,7 @@ Noch nicht entworfen.
   Braucht Protokoll und Firmware.
 - **Anstiegsübersicht, der Rest:** Die Streckenübersicht nennt je Anstieg Nummer,
   Höhenmeter, Länge und die Stelle des Fußes. Offen sind die noch zu fahrenden
-  Höhenmeter. Braucht Protokoll und Firmware.
+  Höhenmeter; die Firmware zeigt, was im Protokoll steht. Braucht Protokoll und Firmware.
 - **Restzeit an den Fahrer anpassen:** Hat die GPX Zeitstempel, kommt die Restzeit zu
   Ziel und Wegpunkten daraus -- so schnell, wie der Router oder die Aufzeichnung es
   vorgibt, nicht wie der Fahrer wirklich fährt. Ohne Zeitstempel rechnet TrailBridge mit

@@ -35,8 +35,9 @@ Was offen und geplant ist, steht in der [Roadmap](ROADMAP.md).
   mit Namen) und die Anstiege (Nummer, Höhenmeter, Länge). Entfernung und Zeit dorthin
   rechnet der BikeComputer aus dem Nav-Frame. Hat die GPX Zeitstempel (aufgezeichnete
   Fahrt, oder BRouter mit `showtime` im Profil), kommt die Restzeit daraus statt aus
-  der momentanen Geschwindigkeit. Die Firmware wertet die Übersicht noch nicht aus --
-  siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md).
+  der momentanen Geschwindigkeit. Die Firmware zeigt die Übersicht auf einem eigenen
+  Screen; das liegt dort noch auf einem Branch und ist am Gerät ungetestet -- siehe
+  [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md).
 - **Testfahrt:** Die geladene GPX-Route lässt sich zum Testen "abspielen"
   (Button "Testfahrt"): TrailBridge schickt dem BikeComputer statt der echten
   GPS-Position eine Fake-Position entlang der Strecke -- mit passender

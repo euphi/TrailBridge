@@ -52,8 +52,8 @@ geprüft, noch nicht auf einer echten Fahrt.
 ## Bekannte Lücken
 
 - Noch keine echte Fahrt mit GPX-Navigation und Höhenprofil.
-- Firmware-Seite der Streckenübersicht fehlt (Vorlage:
-  [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
+- Firmware-Seite der Streckenübersicht ist noch nicht in `main` des BikeComputers und
+  am Gerät ungetestet ([FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
 - Die BLE-Adresse von TrailBridge wird in der Firmware nicht fest gepinnt.
 
 ---
@@ -111,6 +111,6 @@ simulator build, not on a real ride yet.
 ## Known gaps
 
 - No real ride with GPX navigation and elevation profile yet.
-- Firmware side of the route overview is missing (template:
-  [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
+- Firmware side of the route overview is not yet in the BikeComputer's `main` and
+  untested on the device ([FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
 - TrailBridge's BLE address is not pinned in the firmware.
