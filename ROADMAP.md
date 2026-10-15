@@ -14,10 +14,9 @@ die Firmware muss den neuen Teil auswerten. Beides nur gemeinsam ändern.
 |---|---|
 | Navigation aus OsmAnd (Manöver, Straßennamen, Fahrspuren, Restdistanz und -zeit) | gefahren, in v0.4.4 |
 | GPS-Position und Uhrzeit für den BikeComputer | in v0.4.4; das Stellen der Uhr wurde nicht einzeln geprüft |
-| GPX-Navigation, Höhenprofil der Anstiege, Testfahrt, Navi-Modus, Moduswahl | in der Vorabversion v0.5.0-rc2; nur mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch keine echte Fahrt |
-| Höhenprofil der Strecke voraus als rollendes Fenster (auch flach und bergab), Anstieg darin mit ganzer Ausdehnung angesagt | auf `main`, noch in keinem Release |
-| Höhe über dem Meeresspiegel im Positions-Frame (`MSL_ALTITUDE_DM`, Android 14+) | auf `main`, noch in keinem Release |
-| Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | App-Seite auf `main`, noch in keinem Release, nur mit Unit-Tests geprüft; die Firmware wertet sie aus und zeigt sie auf einem eigenen Screen (auf `main` des BikeComputer-Repos, am Gerät ungetestet), siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
+| GPX-Navigation, Höhenprofil der Strecke voraus (rollendes Fenster, Anstieg darin mit ganzer Ausdehnung angesagt), Testfahrt, Navi-Modus, Moduswahl | in v0.5.0; nur mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch keine echte Fahrt |
+| Höhe über dem Meeresspiegel im Positions-Frame (`MSL_ALTITUDE_DM`, Android 14+) | in v0.5.0 |
+| Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | in v0.5.0, App-Seite nur mit Unit-Tests geprüft; die Firmware wertet sie aus und zeigt sie auf einem eigenen Screen (auf `main` des BikeComputer-Repos, am Gerät ungetestet), siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
 | F-Droid | im Repo vorbereitet, siehe [FDROID.md](FDROID.md) |
 
 ## Bekannte Fehler

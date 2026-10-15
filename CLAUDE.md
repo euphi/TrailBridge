@@ -45,14 +45,14 @@ für TrailBridge liegt hier, nicht im BikeComputer-Repo (dessen
   fest gepinnt (Android-Peripherals rotieren die Adresse), kein manueller
   Wechsel der Nav-Anzeige.
 
-- **Meilenstein 4 (auf `main`, Vorabversion 0.5.0-rc1; Stand 2026-10-02):**
+- **Meilenstein 4 (in v0.5.0, Stand 2026-10-15):**
   GPX-Import + eigene Navigation (`GpxParser`, `TurnDetector`,
   `RouteNavigator`) und Höhenprofil als dritter BLE-Service
   (`ElevationProfile`, `ProfileFrameEncoder`, PROTOCOL.md "Höhenprofil-
   Service"). Firmware-Seite: `ClimbProfile`/`ClimbMonitor` im
   TRGB-BikeComputer-Repo (auf `main`). Seit 2026-10-04 geht das Profil immer
   raus (rollendes Fenster der Strecke voraus, Tag `FLAGS`/`ROLLING`), ein
-  Anstieg darin wird angesagt -- noch in keinem Release. JVM-Tests unter
+  Anstieg darin wird angesagt. JVM-Tests unter
   `app/src/test`.
   **Testfahrt** (`RoutePlayer`, `RouteProfileView`, Panel in `MainActivity`):
   spielt die GPX als Fake-GPS-Position samt simulierter Sensorwerte ab
@@ -67,7 +67,7 @@ für TrailBridge liegt hier, nicht im BikeComputer-Repo (dessen
   nur der BC_SIM-Build speist ein. Bisher nur mit Testfahrt und
   Simulator-Build getestet, noch keine echte Fahrt.
 
-- **Streckenübersicht (auf `main`, Stand 2026-10-02, nur App-Seite):** vierter
+- **Streckenübersicht (in v0.5.0, Stand 2026-10-15):** vierter
   BLE-Service, nur lesbar (`RouteOverview`, `OverviewFrameEncoder`, PROTOCOL.md
   "Streckenübersicht-Service"): Ziel, Wegpunkte (`wpt` der GPX, `GpxRoute.waypoints`)
   und Anstiege voraus. Änderungssignal ist der Tag `OVERVIEW_REVISION` (0x0E) im

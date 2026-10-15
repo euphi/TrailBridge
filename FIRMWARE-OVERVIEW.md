@@ -2,7 +2,7 @@
 
 Referenz für die Firmware-Seite der Streckenübersicht. Entstanden als Vorlage, inzwischen
 ist sie umgesetzt: im Repo `TRGB-BikeComputer` auf `main` (Commits `43ecfa1` Code,
-`2374ffe` Doku), noch in keinem Firmware-Release und am Gerät ungetestet. Die App-Seite liegt auf `main`, noch in keinem Release. Das Wire-Format
+`2374ffe` Doku), noch in keinem Firmware-Release und am Gerät ungetestet. Die App-Seite ist in TrailBridge 0.5.0. Das Wire-Format
 steht verbindlich in [PROTOCOL.md](PROTOCOL.md), Abschnitt "Streckenübersicht-Service"
 -- hier steht, was daraus für die Firmware folgt und wie sie es macht. Was der Fahrer
 davon sieht, beschreibt `doc/ROUTE.md` (deutsch `ROUTE.de.md`) im BikeComputer-Repo.

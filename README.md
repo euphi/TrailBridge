@@ -62,11 +62,10 @@ Was offen und geplant ist, steht in der [Roadmap](ROADMAP.md).
 ## Stand
 
 Navigation aus OsmAnd und die GPS-Position laufen Ende-zu-Ende (Version
-0.4.4); die OsmAnd-Navigation ist auf echten Fahrten erprobt. GPX-Navigation, Höhenprofil, Testfahrt, Navi-Modus
-und Moduswahl stecken in der Vorabversion 0.5.0-rc2 und sind bisher nur mit
-der Testfahrt und dem Simulator-Build der Firmware getestet. Das rollende
-Höhenprofil und die Streckenübersicht liegen auf `main` und sind noch in
-keinem Release. APKs: siehe
+0.4.4); die OsmAnd-Navigation ist auf echten Fahrten erprobt. GPX-Navigation, Höhenprofil, Streckenübersicht,
+Testfahrt, Navi-Modus und Moduswahl stecken in Version 0.5.0 und sind bisher nur
+mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch nicht auf
+einer echten Fahrt. APKs: siehe
 [Releases](https://github.com/euphi/TrailBridge/releases). Offene Punkte und
 Pläne: [ROADMAP.md](ROADMAP.md); die Seite des BikeComputers dazu:
 [Roadmap](https://euphi.github.io/TRGB-BikeComputer/de/ROADMAP/).
