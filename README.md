@@ -36,7 +36,7 @@ Was offen und geplant ist, steht in der [Roadmap](ROADMAP.md).
   rechnet der BikeComputer aus dem Nav-Frame. Hat die GPX Zeitstempel (aufgezeichnete
   Fahrt, oder BRouter mit `showtime` im Profil), kommt die Restzeit daraus statt aus
   der momentanen Geschwindigkeit. Die Firmware zeigt die Übersicht auf einem eigenen
-  Screen; das liegt dort noch auf einem Branch und ist am Gerät ungetestet -- siehe
+  Screen; das ist dort auf `main`, aber am Gerät noch ungetestet -- siehe
   [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md).
 - **Testfahrt:** Die geladene GPX-Route lässt sich zum Testen "abspielen"
   (Button "Testfahrt"): TrailBridge schickt dem BikeComputer statt der echten

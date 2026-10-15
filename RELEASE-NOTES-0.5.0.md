@@ -15,7 +15,8 @@ geprüft, noch nicht auf einer echten Fahrt.
   Ausdehnung angesagt.
 - **Streckenübersicht als vierter BLE-Service** (nur lesbar): Ziel, Wegpunkte
   der GPX und Anstiege voraus; die Restzeit kommt aus den Zeitstempeln der GPX,
-  sonst aus der aktuellen Geschwindigkeit. Die Firmware-Seite fehlt noch.
+  sonst aus der aktuellen Geschwindigkeit. Die Firmware zeigt sie auf einem eigenen
+  Screen (auf `main` des BikeComputers, am Gerät noch ungetestet).
 - **Testfahrt.** Spielt die GPX als Fake-Position samt simulierten Sensorwerten
   (Geschwindigkeit, Puls, Trittfrequenz, Höhe, Leistung) ab, immer als
   "simuliert" gekennzeichnet. Dazu fünf optionale Tags im Positions-Service
@@ -52,8 +53,7 @@ geprüft, noch nicht auf einer echten Fahrt.
 ## Bekannte Lücken
 
 - Noch keine echte Fahrt mit GPX-Navigation und Höhenprofil.
-- Firmware-Seite der Streckenübersicht ist noch nicht in `main` des BikeComputers und
-  am Gerät ungetestet ([FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
+- Firmware-Seite der Streckenübersicht ist am Gerät ungetestet ([FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
 - Die BLE-Adresse von TrailBridge wird in der Firmware nicht fest gepinnt.
 
 ---
@@ -73,7 +73,8 @@ simulator build, not on a real ride yet.
   rolling profile of the route ahead; a climb in it is announced in full.
 - **Route overview as a fourth BLE service** (read-only): destination, the
   GPX's waypoints and climbs ahead; the remaining time comes from the GPX time
-  stamps, else from the current speed. The firmware side is still missing.
+  stamps, else from the current speed. The firmware shows it on a screen of its own
+  (on the BikeComputer's `main`, not yet tried on the device).
 - **Test ride.** Plays the GPX back as a fake position with simulated sensor
   values (speed, heart rate, cadence, elevation, power), always flagged as
   simulated. Five optional tags were added to the position service
@@ -111,6 +112,5 @@ simulator build, not on a real ride yet.
 ## Known gaps
 
 - No real ride with GPX navigation and elevation profile yet.
-- Firmware side of the route overview is not yet in the BikeComputer's `main` and
-  untested on the device ([FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
+- Firmware side of the route overview is untested on the device ([FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md)).
 - TrailBridge's BLE address is not pinned in the firmware.

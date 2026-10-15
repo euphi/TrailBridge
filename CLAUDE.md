@@ -74,8 +74,9 @@ für TrailBridge liegt hier, nicht im BikeComputer-Repo (dessen
   Nav-Frame; Entfernung und Zeit rechnet die Firmware aus dem Nav-Frame und den
   Ankern der Übersicht. Die Restzeit kommt aus den Zeitstempeln der GPX, wenn sie
   welche hat (`RouteTimes`), sonst aus der aktuellen Geschwindigkeit. Nur mit
-  Unit-Tests geprüft. Firmware-Seite fehlt -- Vorlage dafür in
-  [`FIRMWARE-OVERVIEW.md`](FIRMWARE-OVERVIEW.md).
+  Unit-Tests geprüft. Firmware-Seite auf `main` im TRGB-BikeComputer-Repo
+  (`RouteOverview`/`RouteMonitor`, Screen `RimRidgeRoute`), am Gerät ungetestet --
+  Referenz in [`FIRMWARE-OVERVIEW.md`](FIRMWARE-OVERVIEW.md).
 
 ## Verifizierte Fakten, die beim Weiterbauen wichtig sind
 

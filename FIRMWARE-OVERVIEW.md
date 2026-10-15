@@ -1,9 +1,8 @@
 # Streckenübersicht: die Seite des BikeComputers
 
 Referenz für die Firmware-Seite der Streckenübersicht. Entstanden als Vorlage, inzwischen
-ist sie umgesetzt: im Repo `TRGB-BikeComputer` auf dem Branch `claude/route-overview`
-(Commits `43ecfa1` Code, `2374ffe` Doku; Stand 2026-10-08 noch nicht in `main` und am
-Gerät ungetestet). Die App-Seite liegt auf `main`, noch in keinem Release. Das Wire-Format
+ist sie umgesetzt: im Repo `TRGB-BikeComputer` auf `main` (Commits `43ecfa1` Code,
+`2374ffe` Doku), noch in keinem Firmware-Release und am Gerät ungetestet. Die App-Seite liegt auf `main`, noch in keinem Release. Das Wire-Format
 steht verbindlich in [PROTOCOL.md](PROTOCOL.md), Abschnitt "Streckenübersicht-Service"
 -- hier steht, was daraus für die Firmware folgt und wie sie es macht. Was der Fahrer
 davon sieht, beschreibt `doc/ROUTE.md` (deutsch `ROUTE.de.md`) im BikeComputer-Repo.
@@ -159,6 +158,6 @@ Der Rest rückt mit den nächsten Revisionen nach. Die Firmware zeigt dann in de
 
 ## Doku im BikeComputer-Repo
 
-Mit dem Branch nachgezogen (Commit `2374ffe`): `doc/ROUTE.md` und `ROUTE.de.md`, die
+Nachgezogen (Commit `2374ffe`): `doc/ROUTE.md` und `ROUTE.de.md`, die
 Roadmap und die TrailBridge-Seite. `doc/trailbridge/PROTOCOL*.md` kommen weiter über
 `doc/fetch_trailbridge.sh` von hier.
