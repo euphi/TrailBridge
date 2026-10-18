@@ -17,7 +17,8 @@ die Firmware muss den neuen Teil auswerten. Beides nur gemeinsam ändern.
 | GPX-Navigation, Höhenprofil der Strecke voraus (rollendes Fenster, Anstieg darin mit ganzer Ausdehnung angesagt), Testfahrt, Navi-Modus, Moduswahl | in v0.5.0; nur mit der Testfahrt und dem Simulator-Build der Firmware getestet, noch keine echte Fahrt |
 | Höhe über dem Meeresspiegel im Positions-Frame (`MSL_ALTITUDE_DM`, Android 14+) | in v0.5.0 |
 | Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | in v0.5.0, App-Seite nur mit Unit-Tests geprüft; die Firmware wertet sie aus und zeigt sie auf einem eigenen Screen (auf `main` des BikeComputer-Repos, am Gerät ungetestet), siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
-| F-Droid | im Repo vorbereitet, siehe [FDROID.md](FDROID.md) |
+| Englische Oberfläche (Standard) und Deutsch, je nach Sprache des Handys; auch die Texte an den BikeComputer | in v0.5.0 |
+| F-Droid | v0.5.0 als PR bei fdroiddata eingereicht, siehe [FDROID.md](FDROID.md) |
 
 ## Bekannte Fehler
 
@@ -50,8 +51,6 @@ Noch nicht entworfen.
 - **Richtung zurück zur Route:** Abseits der Route sendet TrailBridge nur die
   Entfernung zu ihr. Gewünscht: auch die Peilung, damit der BikeComputer einen Pfeil
   zeigen kann. Braucht Protokoll und Firmware.
-- **Englische Übersetzung:** Die Texte der App gibt es nur auf Deutsch, auch "Abseits
-  der Route", das als Straßenname an den BikeComputer geht.
 - **Zeitraffer für die Testfahrt:** Sie läuft nur in Echtzeit; einen langen Anstieg zu
   testen dauert deshalb Stunden.
 
