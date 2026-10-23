@@ -15,6 +15,7 @@ import android.provider.OpenableColumns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +27,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -82,6 +85,14 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     private View osmandRow;
     private View retryButton;
     private View routeCard;
+    private View plannedCard;
+    private TextView plannedStatusView;
+    private EditText plannedUrlInput;
+    private View plannedSettings;
+    private Button plannedExpandButton;
+    private Button plannedSaveButton;
+    private Button plannedStartOsmandButton;
+    private boolean plannedExpanded = false;
     private View rawCard;
     private TextView modeHint;
     private final java.util.EnumMap<UiMode, Button> modeButtons = new java.util.EnumMap<>(UiMode.class);
@@ -147,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
             if (routeActive) service.stopRoute(); else service.startRoute();
         });
         setupTestPanel();
+        setupPlannedCard();
         updateRouteButton();
         handleIntent(getIntent());
     }
@@ -154,6 +166,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     private void setupModeSelector() {
         osmandRow = findViewById(R.id.osmandRow);
         routeCard = findViewById(R.id.routeCard);
+        plannedCard = findViewById(R.id.plannedCard);
         rawCard = findViewById(R.id.rawCard);
         modeHint = findViewById(R.id.modeHint);
         modeButtons.put(UiMode.OSMAND, findViewById(R.id.modeOsmand));
@@ -197,6 +210,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         osmandRow.setVisibility(mode.showsOsmand(osmandConnected) ? View.VISIBLE : View.GONE);
         retryButton.setVisibility(osmandConnected ? View.GONE : View.VISIBLE);
         routeCard.setVisibility(mode.showsRoute() ? View.VISIBLE : View.GONE);
+        plannedCard.setVisibility(mode.showsRoute() ? View.VISIBLE : View.GONE);
         routeToggleButton.setVisibility(mode.showsRouteStart() ? View.VISIBLE : View.GONE);
         UiMode.TestPanel panel = mode.testPanel();
         testToggleButton.setVisibility(panel == UiMode.TestPanel.TOGGLE ? View.VISIBLE : View.GONE);
@@ -204,6 +218,46 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
                 || (panel == UiMode.TestPanel.TOGGLE && testPanelOpen));
         testPanel.setVisibility(showPanel ? View.VISIBLE : View.GONE);
         rawCard.setVisibility(mode.showsRaw() ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * Address of the BikeLog service, from which the service fetches the planned routes. Collapsed, the card
+     * is a status line and "Check"; the help text, the address and the OsmAnd switch show when it is opened
+     * (and from the start while there is no address yet).
+     */
+    private void setupPlannedCard() {
+        plannedStatusView = findViewById(R.id.plannedStatusView);
+        plannedUrlInput = findViewById(R.id.plannedUrlInput);
+        plannedSettings = findViewById(R.id.plannedSettings);
+        plannedExpandButton = findViewById(R.id.plannedExpandButton);
+        plannedSaveButton = findViewById(R.id.plannedSaveButton);
+        plannedStartOsmandButton = findViewById(R.id.plannedStartOsmandButton);
+        PlannedRouteSettings settings = new PlannedRouteSettings(this);
+        plannedUrlInput.setText(settings.baseUrl());
+        plannedExpanded = settings.baseUrl().isEmpty();
+        CheckBox toOsmand = findViewById(R.id.plannedOsmandCheck);
+        toOsmand.setChecked(settings.sendToOsmAnd());
+        toOsmand.setOnClickListener(v -> settings.setSendToOsmAnd(toOsmand.isChecked()));
+        plannedExpandButton.setOnClickListener(v -> {
+            plannedExpanded = !plannedExpanded;
+            applyPlannedExpanded();
+        });
+        plannedSaveButton.setOnClickListener(v -> {
+            settings.setBaseUrl(plannedUrlInput.getText().toString());
+            WindowCompat.getInsetsController(getWindow(), v).hide(WindowInsetsCompat.Type.ime());
+            if (service != null) service.checkPlannedRoute();
+        });
+        plannedStartOsmandButton.setOnClickListener(v -> {
+            if (service != null) service.startRouteInOsmAnd();
+        });
+        applyPlannedExpanded();
+    }
+
+    private void applyPlannedExpanded() {
+        plannedSettings.setVisibility(plannedExpanded ? View.VISIBLE : View.GONE);
+        plannedExpandButton.setText(plannedExpanded ? R.string.planned_settings_close : R.string.planned_settings);
+        // Only the open card has an address to save.
+        plannedSaveButton.setText(plannedExpanded ? R.string.planned_save : R.string.planned_check);
     }
 
     private void setupLiveViews() {
@@ -363,6 +417,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
     private void updateRouteButton() {
         testToggleButton.setEnabled(routeLoaded);
         routeToggleButton.setEnabled(routeLoaded);
+        plannedStartOsmandButton.setEnabled(routeLoaded);
         routeToggleButton.setText(routeActive ? R.string.route_stop : R.string.route_start);
         applyMode();
     }
@@ -540,6 +595,16 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
             else if (!error) routeLoaded = true;
             routeInfoView.setText(summary.isEmpty() ? getString(R.string.route_none) : summary);
             updateRouteButton();
+        });
+    }
+
+    @Override
+    public void onPlannedRouteStatus(String status, boolean error) {
+        runOnUiThread(() -> {
+            plannedStatusView.setVisibility(status.isEmpty() ? View.GONE : View.VISIBLE);
+            plannedStatusView.setText(status);
+            plannedStatusView.setTextColor(ContextCompat.getColor(this,
+                    error ? R.color.rr_zone_red : R.color.rr_parchment));
         });
     }
 

@@ -116,8 +116,11 @@ veröffentlichter Release lässt sich nicht nachträglich ändern.
    auftaucht.
 
 Mögliche Rückfragen der Reviewer, schon beantwortet:
-- **Anti-Features:** keine -- kein Tracking, keine Netzwerkzugriffe, keine
-  proprietären Abhängigkeiten (nur `androidx.appcompat`). OsmAnd ist selbst
+- **Anti-Features:** keine -- kein Tracking, keine proprietären Abhängigkeiten
+  (nur `androidx.appcompat`). Das Netz (`INTERNET`) nutzt nur der Abruf geplanter
+  Routen und nur, wenn der Nutzer die Adresse seines eigenen BikeLog-Dienstes
+  einträgt; ohne sie verlässt nichts das Handy. Der Dienst gehört zum
+  BikeComputer-Projekt und steht beim Nutzer selbst, kein Drittanbieter. OsmAnd ist selbst
   in F-Droid (OsmAnd~, Paket `net.osmand.plus`, wird von TrailBridge
   unterstützt).
 - **Name/Marke:** "OsmAnd" steht bewusst nicht im App-Namen.

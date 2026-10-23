@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -13,11 +14,15 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 
+import androidx.core.content.FileProvider;
+
 import net.osmand.aidlapi.IOsmAndAidlCallback;
 import net.osmand.aidlapi.IOsmAndAidlInterface;
 import net.osmand.aidlapi.gpx.AGpxBitmap;
+import net.osmand.aidlapi.gpx.ImportGpxParams;
 import net.osmand.aidlapi.info.AppInfoParams;
 import net.osmand.aidlapi.logcat.OnLogcatMessageParams;
+import net.osmand.aidlapi.navigation.NavigateGpxParams;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -85,7 +90,9 @@ public class OsmAndLink {
     private final Listener listener;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private IOsmAndAidlInterface iface;
+    // volatile: importGpx() is called from a worker thread
+    private volatile IOsmAndAidlInterface iface;
+    private volatile String osmandPackage;
     private boolean bound = false;
     private boolean subscribed = false;
     private NavState lastState = NavState.NONE;
@@ -110,6 +117,7 @@ public class OsmAndLink {
             setStatus(Status.ERROR, appContext.getString(R.string.osmand_not_found));
             return;
         }
+        osmandPackage = pkg;
         Intent intent = new Intent(SERVICE_ACTION);
         intent.setPackage(pkg);
         boolean ok = appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -189,6 +197,58 @@ public class OsmAndLink {
             Log.w(TAG, "registerForNavigationUpdates failed", e);
             setStatus(Status.ERROR, appContext.getString(R.string.osmand_register_error, e.getMessage()));
         }
+    }
+
+    /**
+     * Puts a GPX file into OsmAnd's track list and shows it on the map (AIDL importGpx). The file goes over
+     * as a FileProvider URI -- as a raw string it would have to pass the Binder buffer (1 MB, two bytes per
+     * character), which a long track with elevation does not fit. Blocks until OsmAnd has answered: call it
+     * off the main thread.
+     *
+     * @param destinationName file name in OsmAnd's track list
+     * @return false if OsmAnd is not connected or did not take the file
+     */
+    public boolean importGpx(File gpx, String destinationName) {
+        IOsmAndAidlInterface i = iface;
+        if (i == null) return false;
+        try {
+            return i.importGpx(new ImportGpxParams(uriForOsmAnd(gpx), destinationName, "orange", true));
+        } catch (Exception e) {
+            Log.w(TAG, "importGpx failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * Starts a navigation along a GPX file in OsmAnd (AIDL navigateGpx), without OsmAnd asking first and
+     * replacing a navigation that is running. Same transfer and threading as {@link #importGpx}.
+     *
+     * @return false if OsmAnd is not connected or did not start
+     */
+    public boolean navigateGpx(File gpx, String name) {
+        IOsmAndAidlInterface i = iface;
+        if (i == null) return false;
+        try {
+            NavigateGpxParams params = new NavigateGpxParams(uriForOsmAnd(gpx), true, true);
+            params.setFileName(name);
+            // Must be set (boxed in the API, written to the Parcel unchecked: null throws a NullPointerException).
+            // true: the whole track from its start. Otherwise OsmAnd joins it at the nearest point -- on a
+            // round trip that is the destination, which is where the rider stands: arrived at once.
+            params.setPassWholeRoute(true);
+            return i.navigateGpx(params);
+        } catch (Exception e) {
+            Log.w(TAG, "navigateGpx failed", e);
+            return false;
+        }
+    }
+
+    /** A content URI for the file that only OsmAnd may read (FileProvider, see res/xml/file_paths.xml). */
+    private Uri uriForOsmAnd(File file) {
+        String pkg = osmandPackage;
+        if (pkg == null) throw new IllegalStateException("OsmAnd not found");
+        Uri uri = FileProvider.getUriForFile(appContext, appContext.getPackageName() + ".files", file);
+        appContext.grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        return uri;
     }
 
     /** Re-attempt the subscription without re-binding -- for a "Retry" button

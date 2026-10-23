@@ -422,6 +422,102 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- ============ Geplante Routen: Abruf vom BikeLog-Dienst (siehe PlannedRouteClient) ============ -->
+    <LinearLayout
+        android:id="@+id/plannedCard"
+        style="@style/TB.Card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/TB.Eyebrow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/card_planned" />
+
+            <Button
+                android:id="@+id/plannedExpandButton"
+                style="@style/TB.Button.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/planned_settings" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/plannedStatusView"
+            style="@style/TB.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone" />
+
+        <!-- Hilfe, Adresse und OsmAnd-Schalter: nur aufgeklappt -->
+        <LinearLayout
+            android:id="@+id/plannedSettings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/TB.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/planned_hint"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/plannedUrlInput"
+                style="@style/TB.Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:autofillHints="url"
+                android:hint="@string/planned_url_hint"
+                android:imeOptions="actionDone"
+                android:inputType="textUri" />
+
+            <CheckBox
+                android:id="@+id/plannedOsmandCheck"
+                style="@style/TB.Check"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/planned_to_osmand" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/plannedSaveButton"
+                style="@style/TB.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="5dp"
+                android:layout_weight="1"
+                android:text="@string/planned_check" />
+
+            <Button
+                android:id="@+id/plannedStartOsmandButton"
+                style="@style/TB.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="5dp"
+                android:layout_weight="1"
+                android:text="@string/planned_start_osmand" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- ============ Position / Navigation (auch im Navi-Modus, siehe NaviActivity) ============ -->
     <include layout="@layout/card_position" />
 

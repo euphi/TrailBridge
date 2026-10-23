@@ -28,6 +28,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +51,10 @@ import java.util.concurrent.Executors;
  * Service erzeugt dann einmal pro Sekunde eine Fake-Position samt simulierten
  * Sensorwerten (Geschwindigkeit, Puls, Trittfrequenz) und schickt sie statt
  * des echten GPS-Fixes an den BikeComputer und in den RouteNavigator.
+ *
+ * Ausserdem holt der Service die geplante Route vom BikeLog-Dienst ab
+ * (PlannedRouteClient), beim Start und danach alle 15 Minuten -- aber nur, solange
+ * weder Navigation noch Testfahrt laufen, denn eine neue Route beendet beide.
  *
  * MainActivity bindet sich nur noch dran, um Status-Updates fuers UI zu
  * bekommen; der Service selbst laeuft als Foreground Service mit
@@ -77,6 +84,13 @@ public class TrailBridgeService extends Service
          */
         default void onProfileChanged(@Nullable ProfileFrame frame) {
         }
+        /**
+         * What the last look for a planned route (BikeLog) found.
+         * @param status "" if there was none yet
+         * @param error  the check failed or the route could not be loaded
+         */
+        default void onPlannedRouteStatus(String status, boolean error) {
+        }
     }
 
     public static final String ACTION_STOP = "com.euphi.trailbridge.action.STOP";
@@ -90,6 +104,9 @@ public class TrailBridgeService extends Service
     private static final String PREF_EMULATE_POWER = "emulate_power";
     private static final long PLAYBACK_TICK_MS = 1000L;
     private static final String ROUTE_FILE = "route.gpx";
+    private static final long PLANNED_INTERVAL_MS = 15 * 60 * 1000L;
+    private static final String ROUTES_CHANNEL_ID = "trailbridge_routes";
+    private static final int ROUTE_NOTIFICATION_ID = 2;
 
     private final IBinder binder = new LocalBinder();
 
@@ -132,6 +149,16 @@ public class TrailBridgeService extends Service
     @Nullable private PlaybackState lastPlayback;
     @Nullable private ProfileFrame lastProfile;
     private final Runnable playbackTick = this::onPlaybackTick;
+
+    // ---- Geplante Routen (BikeLog) ----
+    // Eigener Thread: ein haengendes Netz soll das Parsen einer GPX nicht aufhalten.
+    private final ExecutorService netWorker = Executors.newSingleThreadExecutor();
+    private final Runnable plannedTick = this::onPlannedTick;
+    private boolean plannedCheckRunning = false;
+    // elapsedRealtime der letzten Abfrage; zu Beginn "lange her", damit gleich die erste kommt.
+    private long plannedCheckedAtMs = -PLANNED_INTERVAL_MS;
+    private String lastPlannedStatus = "";
+    private boolean lastPlannedError = false;
 
     // Zuletzt bekannter Stand, damit eine (neu) gebundene Activity sofort den
     // aktuellen Stand zeigt statt bis zum naechsten Event zu warten.
@@ -177,17 +204,25 @@ public class TrailBridgeService extends Service
             // Service selbst kann keine Berechtigungsdialoge zeigen.
             osmAndLink.start();
             gattServer.start();
+            mainHandler.postDelayed(plannedTick, PLANNED_INTERVAL_MS);
         }
         // Standort ist optional und kann später dazukommen: GpsLink.start() tut nichts, wenn
         // es schon läuft, und meldet sonst die fehlende Berechtigung.
         gpsLink.start();
+        // Beim Start des Dienstes; danach auch bei jedem Öffnen der App, falls der Timer im
+        // Schlaf des Handys stehen geblieben ist und die letzte Abfrage lange her ist.
+        if (SystemClock.elapsedRealtime() - plannedCheckedAtMs >= PLANNED_INTERVAL_MS) {
+            checkPlannedRoute();
+        }
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
-        mainHandler.removeCallbacks(playbackTick);
+        // Auch die Ergebnisse der Worker: sie duerfen nach dem Ende nichts mehr anstossen.
+        mainHandler.removeCallbacksAndMessages(null);
         worker.shutdownNow();
+        netWorker.shutdownNow();
         osmAndLink.stop();
         gpsLink.stop();
         gattServer.stop();
@@ -215,6 +250,7 @@ public class TrailBridgeService extends Service
             listener.onRouteChanged(routeSummary, navigator != null, false);
             listener.onPlaybackChanged(lastPlayback);
             listener.onProfileChanged(lastProfile);
+            listener.onPlannedRouteStatus(lastPlannedStatus, lastPlannedError);
         }
     }
 
@@ -242,31 +278,64 @@ public class TrailBridgeService extends Service
      * die Navigation noch nicht -- das macht startRoute().
      */
     public void loadGpx(byte[] data, String displayName) {
+        importGpx(data, displayName, false, null);
+    }
+
+    private enum ImportResult { LOADED, BUSY, INVALID }
+
+    private interface ImportDone {
+        /** @param message why the file is invalid ({@link ImportResult#INVALID}), else "" */
+        void onDone(ImportResult result, String message);
+    }
+
+    /**
+     * @param onlyIfIdle give up ({@link ImportResult#BUSY}) rather than end a navigation or test ride that
+     *                   started while the file was on its way -- for a route nobody asked for just now
+     * @param done       called on the main thread, when the route is in place or not
+     */
+    private void importGpx(byte[] data, String displayName, boolean onlyIfIdle, @Nullable ImportDone done) {
         worker.execute(() -> {
             GpxRoute result;
             try {
                 result = GpxParser.parse(new ByteArrayInputStream(data), displayName);
             } catch (GpxParser.GpxException e) {
-                String msg = getString(R.string.gpx_import_failed, e.localized(this));
-                mainHandler.post(() -> notifyRoute(msg, true));
+                String reason = e.localized(this);
+                String msg = getString(R.string.gpx_import_failed, reason);
+                mainHandler.post(() -> {
+                    notifyRoute(msg, true);
+                    if (done != null) done.onDone(ImportResult.INVALID, reason);
+                });
                 return;
             }
             final GpxRoute parsed = result;
-            try {
-                saveRouteFile(data);
-            } catch (IOException e) {
-                // Die Route laeuft trotzdem, nur ein Neustart des Dienstes vergisst sie.
-                Log.w(TAG, "Could not save the route", e);
-            }
             String summary = summarize(parsed);
             RoutePlayer parsedPlayer = new RoutePlayer(parsed);
             mainHandler.post(() -> {
+                if (onlyIfIdle && routeBusy()) {
+                    if (done != null) done.onDone(ImportResult.BUSY, "");
+                    return;
+                }
                 playbackStop();
                 stopRoute();
                 setRoute(parsed, parsedPlayer);
                 publishRoute(summary);
+                // Gespeichert wird erst, wenn die Route wirklich gilt (und im Worker, in der Reihenfolge der Importe).
+                worker.execute(() -> {
+                    try {
+                        saveRouteFile(data);
+                    } catch (IOException e) {
+                        // Die Route laeuft trotzdem, nur ein Neustart des Dienstes vergisst sie.
+                        Log.w(TAG, "Could not save the route", e);
+                    }
+                });
+                if (done != null) done.onDone(ImportResult.LOADED, "");
             });
         });
+    }
+
+    /** Navigation or test ride running -- a new route would end it. */
+    private boolean routeBusy() {
+        return navigator != null || playbackActive;
     }
 
     /** Beginnt die Navigation entlang der geladenen Route (Position kommt von GpsLink). */
@@ -551,6 +620,227 @@ public class TrailBridgeService extends Service
         osmAndLink.retrySubscribe();
     }
 
+    // ---- Geplante Routen vom BikeLog-Dienst ----
+
+    private void onPlannedTick() {
+        mainHandler.postDelayed(plannedTick, PLANNED_INTERVAL_MS);
+        checkPlannedRoute();
+    }
+
+    /**
+     * Asks the BikeLog service for a newly marked route and loads it (without starting it). Does nothing
+     * while a check is under way, while address or token are missing, and -- the new route would end
+     * it -- while a navigation or test ride is running; then the next interval looks again.
+     */
+    public void checkPlannedRoute() {
+        if (plannedCheckRunning) return;
+        PlannedRouteSettings settings = new PlannedRouteSettings(this);
+        PlannedRouteClient client = settings.client();
+        if (client == null) {
+            publishPlannedStatus(getString(R.string.planned_off), false);
+            return;
+        }
+        if (routeBusy()) {
+            publishPlannedStatus(getString(R.string.planned_busy), false);
+            return;
+        }
+        plannedCheckRunning = true;
+        plannedCheckedAtMs = SystemClock.elapsedRealtime();
+        publishPlannedStatus(getString(R.string.planned_checking), false);
+        String loaded = settings.loadedRevision();
+        String confirmed = settings.confirmedRevision();
+        netWorker.execute(() -> {
+            try {
+                PlannedRouteClient.Check check = client.check(loaded);
+                if (check.kind == PlannedRouteClient.Kind.NEW && !check.info.revision.equals(loaded)) {
+                    PlannedRouteClient.Info info = check.info;
+                    byte[] data = client.download(info);
+                    mainHandler.post(() -> importPlanned(client, settings, info, data));
+                    return;
+                }
+                // Nothing to load. A confirmation that failed after the last load is still owed.
+                if (check.kind != PlannedRouteClient.Kind.NONE && loaded != null && !loaded.equals(confirmed)) {
+                    client.confirm(loaded);
+                    settings.setConfirmedRevision(loaded);
+                }
+                String status = stamped(getString(check.kind == PlannedRouteClient.Kind.NONE
+                        ? R.string.planned_none : R.string.planned_unchanged));
+                mainHandler.post(() -> finishPlannedCheck(status, false));
+            } catch (PlannedRouteClient.FetchException e) {
+                Log.w(TAG, "Planned route: " + e.reason + " " + e.getMessage());
+                String status = stamped(plannedFailure(e));
+                mainHandler.post(() -> finishPlannedCheck(status, true));
+            } catch (RuntimeException e) {
+                // Whatever it is, the checks must not stop for good (plannedCheckRunning).
+                Log.e(TAG, "Planned route: unexpected", e);
+                String status = stamped(getString(R.string.planned_bad_response));
+                mainHandler.post(() -> finishPlannedCheck(status, true));
+            }
+        });
+    }
+
+    /** The file is here (main thread): load it, remember its revision, tell the rider, tell the service. */
+    private void importPlanned(PlannedRouteClient client, PlannedRouteSettings settings,
+                               PlannedRouteClient.Info info, byte[] data) {
+        String name = info.name.isEmpty() ? getString(R.string.route_default_name) : info.name;
+        importGpx(data, name, true, (result, message) -> {
+            switch (result) {
+                case LOADED:
+                    // Not before the route is in: a failed parse is tried again, not confirmed.
+                    settings.setLoadedRevision(info.revision);
+                    notifyPlannedRouteLoaded(name);
+                    publishPlannedStatus(stamped(getString(R.string.planned_loaded, name)), false);
+                    confirmPlanned(client, settings, info.revision, name, data);
+                    break;
+                case BUSY:
+                    // Started while the file came in; the revision is not remembered, so it comes again.
+                    finishPlannedCheck(getString(R.string.planned_busy), false);
+                    break;
+                default:
+                    finishPlannedCheck(stamped(getString(R.string.planned_import_failed, name, message)), true);
+            }
+        });
+    }
+
+    private void confirmPlanned(PlannedRouteClient client, PlannedRouteSettings settings, String revision,
+                                String name, byte[] data) {
+        netWorker.execute(() -> {
+            String status;
+            boolean error = false;
+            try {
+                // false: a newer revision exists already (409) -- the next check brings it, nothing to retry.
+                client.confirm(revision);
+                settings.setConfirmedRevision(revision);
+                status = stamped(settings.sendToOsmAnd()
+                        ? getString(sendToOsmAnd(data, name) ? R.string.planned_loaded_osmand
+                                : R.string.planned_loaded_no_osmand, name)
+                        : getString(R.string.planned_loaded, name));
+            } catch (PlannedRouteClient.FetchException e) {
+                Log.w(TAG, "Planned route: confirmation failed: " + e.reason + " " + e.getMessage());
+                status = stamped(getString(R.string.planned_confirm_failed, name));
+                error = true;
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Planned route: unexpected", e);
+                status = stamped(getString(R.string.planned_confirm_failed, name));
+                error = true;
+            }
+            String s = status;
+            boolean err = error;
+            mainHandler.post(() -> finishPlannedCheck(s, err));
+        });
+    }
+
+    /**
+     * Puts the route into OsmAnd's track list, shown on the map. Not started as a navigation: that is
+     * up to the rider ({@link #startRouteInOsmAnd()}). Blocks (file, OsmAnd's answer): netWorker only.
+     */
+    private boolean sendToOsmAnd(byte[] data, String name) {
+        File file = fileForOsmAnd(data, name);
+        return file != null && osmAndLink.importGpx(file, file.getName());
+    }
+
+    /** Writes the route where OsmAnd can be given it (see res/xml/file_paths.xml); null if that fails. */
+    @Nullable
+    private File fileForOsmAnd(byte[] data, String name) {
+        // The name becomes a file name, in our cache and in OsmAnd.
+        String safe = name.replaceAll("[^\\p{L}\\p{N} ._-]", "_").trim();
+        if (safe.length() > 60) safe = safe.substring(0, 60);
+        if (safe.isEmpty()) safe = getString(R.string.route_default_name);
+        File dir = new File(getCacheDir(), "osmand");
+        File[] old = dir.listFiles();
+        if (old != null) {
+            for (File f : old) f.delete();   // OsmAnd has copied the last one by now
+        }
+        File file = new File(dir, safe + ".gpx");
+        try {
+            if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("cannot create " + dir);
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                out.write(data);
+            }
+            return file;
+        } catch (IOException e) {
+            Log.w(TAG, "Could not write the route for OsmAnd", e);
+            return null;
+        }
+    }
+
+    /**
+     * Starts the loaded route as a navigation in OsmAnd, right away. OsmAnd's data then reaches the
+     * BikeComputer, so a navigation or test ride of our own ends (it would take precedence).
+     */
+    public void startRouteInOsmAnd() {
+        GpxRoute r = route;
+        if (r == null) return;
+        String name = r.name.isEmpty() ? getString(R.string.route_default_name) : r.name;
+        netWorker.execute(() -> {
+            boolean ok = false;
+            try {
+                byte[] data = Files.readAllBytes(new File(getFilesDir(), ROUTE_FILE).toPath());
+                File file = fileForOsmAnd(data, name);
+                ok = file != null && osmAndLink.navigateGpx(file, file.getName());
+            } catch (IOException e) {
+                Log.w(TAG, "Could not read the saved route", e);
+            }
+            boolean started = ok;
+            mainHandler.post(() -> {
+                if (started) {
+                    playbackStop();
+                    stopRoute();
+                }
+                publishPlannedStatus(stamped(started ? getString(R.string.planned_osmand_started, name)
+                        : getString(R.string.planned_osmand_failed)), !started);
+            });
+        });
+    }
+
+    private void finishPlannedCheck(String status, boolean error) {
+        plannedCheckRunning = false;
+        publishPlannedStatus(status, error);
+    }
+
+    private void publishPlannedStatus(String status, boolean error) {
+        lastPlannedStatus = status;
+        lastPlannedError = error;
+        if (uiListener != null) uiListener.onPlannedRouteStatus(status, error);
+    }
+
+    private String plannedFailure(PlannedRouteClient.FetchException e) {
+        switch (e.reason) {
+            case BAD_URL:
+                return getString(R.string.planned_bad_url);
+            case UNAUTHORIZED:
+                return getString(R.string.planned_unauthorized, e.status);
+            case NETWORK:
+                return getString(R.string.planned_network, e.getMessage());
+            case SERVER:
+                return getString(R.string.planned_server, e.status);
+            case TOO_LARGE:
+                return getString(R.string.planned_too_large);
+            case CHECKSUM:
+                return getString(R.string.planned_checksum);
+            default:
+                return getString(R.string.planned_bad_response);
+        }
+    }
+
+    /** "14:32 · message": when the service was last asked. */
+    private static String stamped(String message) {
+        return DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date()) + " · " + message;
+    }
+
+    private void notifyPlannedRouteLoaded(String name) {
+        PendingIntent open = PendingIntent.getActivity(
+                this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+        Notification notification = new NotificationCompat.Builder(this, ROUTES_CHANNEL_ID)
+                .setContentTitle(getString(R.string.notif_route_title))
+                .setContentText(getString(R.string.notif_route_text, name))
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build();
+        getSystemService(NotificationManager.class).notify(ROUTE_NOTIFICATION_ID, notification);
+    }
+
     // ---- OsmAndLink.Listener ----
 
     @Override
@@ -613,6 +903,12 @@ public class TrailBridgeService extends Service
         channel.setDescription(getString(R.string.notif_channel_desc));
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(channel);
+
+        // Einmalige Meldung ("Route geladen"), nicht die Dauerbenachrichtigung: darf sich bemerkbar machen.
+        NotificationChannel routes = new NotificationChannel(
+                ROUTES_CHANNEL_ID, getString(R.string.notif_route_channel_name), NotificationManager.IMPORTANCE_DEFAULT);
+        routes.setDescription(getString(R.string.notif_route_channel_desc));
+        nm.createNotificationChannel(routes);
     }
 
     private void startForegroundNotification() {

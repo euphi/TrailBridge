@@ -38,6 +38,19 @@ Was offen und geplant ist, steht in der [Roadmap](ROADMAP.md).
   der momentanen Geschwindigkeit. Die Firmware zeigt die Übersicht auf einem eigenen
   Screen; das ist dort auf `main`, aber am Gerät noch ungetestet -- siehe
   [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md).
+- **Geplante Routen:** Trägt man im Hauptscreen die Adresse des
+  BikeLog-Dienstes (aus dem BikeComputer-Projekt, Seite "Routes for TrailBridge" in
+  dessen `doc/LOGSERVICE.md`) ein, holt TrailBridge die dort für das Handy
+  markierte Route beim Start des Dienstes und danach alle 15 Minuten ab -- aber
+  nur, solange keine Navigation und keine Testfahrt läuft, denn eine neue Route
+  beendet beide. Sie wird geladen wie eine von Hand geöffnete GPX (nicht gestartet),
+  mit einer Benachrichtigung gemeldet und -- abschaltbar -- über OsmAnds AIDL-Schnittstelle
+  (`importGpx`) in OsmAnds Track-Liste gelegt und auf der Karte angezeigt (die Navigation
+  startet man dort selbst); danach bestätigt TrailBridge dem Dienst
+  den Empfang. Eine Revision, die nicht geladen oder bestätigt werden konnte,
+  wird beim nächsten Mal erneut versucht. Das ist die einzige Funktion, die das
+  Netz nutzt (`INTERNET`); ohne eingetragene Adresse bleibt sie aus. `http://` geht
+  nur im eigenen Netz sinnvoll, im Internet bitte `https://`.
 - **Testfahrt:** Die geladene GPX-Route lässt sich zum Testen "abspielen"
   (Button "Testfahrt"): TrailBridge schickt dem BikeComputer statt der echten
   GPS-Position eine Fake-Position entlang der Strecke -- mit passender
@@ -81,7 +94,8 @@ und `app/src/main/java/net/osmand/aidlapi/`.
 
 `gradle testDebugUnitTest` -- GPX-Parser, Abbiegeerkennung, Höhenprofil,
 Route-Matching, Streckenübersicht und Frame-Encoder sind reines Java ohne
-Android-Abhängigkeit.
+Android-Abhängigkeit; der Abruf geplanter Routen (`PlannedRouteClient`) läuft gegen
+einen kleinen HTTP-Server im Test.
 
 ## Bauen
 

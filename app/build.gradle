@@ -74,6 +74,8 @@ dependencies {
 
     // Nur fuer die JVM-Unit-Tests (app/src/test), landet nicht in der APK.
     testImplementation 'junit:junit:4.13.2'
+    // Auf dem Handy ist org.json Teil von Android; in der JVM sind es nur Stubs.
+    testImplementation 'org.json:json:20240303'
 }
 
 // Baseline-Profile (assets/dexopt/baseline.prof) nicht erzeugen: die Datei

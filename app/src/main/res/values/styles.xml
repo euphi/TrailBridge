@@ -151,6 +151,16 @@
         <item name="android:paddingRight">6dp</item>
     </style>
 
+    <!-- Eingabefeld: die eingelassene Konsolenflaeche des Dashboards, Schrift wie die Konsole. -->
+    <style name="TB.Input" parent="Widget.AppCompat.EditText">
+        <item name="android:fontFamily">@font/ibm_plex_mono_regular</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/rr_parchment</item>
+        <item name="android:background">@drawable/bg_console</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
     <style name="TB.Check" parent="Widget.AppCompat.CompoundButton.CheckBox">
         <item name="android:fontFamily">@font/ibm_plex_sans_medium</item>
         <item name="android:textSize">14sp</item>

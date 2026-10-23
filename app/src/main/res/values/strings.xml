@@ -137,6 +137,40 @@
     <string name="notif_title">TrailBridge active</string>
     <string name="notif_text">Relays OsmAnd navigation and GPS position to the BikeComputer via BLE</string>
     <string name="notif_stop">Stop</string>
+    <string name="notif_route_channel_name">Planned routes</string>
+    <string name="notif_route_channel_desc">Tells you when TrailBridge has loaded a newly planned route.</string>
+    <string name="notif_route_title">Planned route</string>
+    <string name="notif_route_text">Route %1$s loaded</string>
+
+    <!-- Planned routes (BikeLog service) -->
+    <string name="card_planned">Planned routes</string>
+    <string name="planned_hint">TrailBridge fetches the route you mark in the BikeLog service when it starts and every 15 minutes -- but not during a navigation or test ride. It only loads the route (and shows it in OsmAnd); you start it.</string>
+    <string name="planned_settings">Settings</string>
+    <string name="planned_settings_close">Collapse</string>
+    <string name="planned_check">Check</string>
+    <string name="planned_start_osmand">Start in OsmAnd</string>
+    <string name="planned_osmand_started">Route %1$s started in OsmAnd</string>
+    <string name="planned_osmand_failed">OsmAnd did not start the route (not connected?)</string>
+    <string name="planned_url_hint">Service address, e.g. https://bikelog.example</string>
+    <string name="planned_save">Save and check</string>
+    <string name="planned_off">Off -- enter the address.</string>
+    <string name="planned_checking">Checking …</string>
+    <string name="planned_busy">Navigation or test ride running -- the next check comes after it.</string>
+    <string name="planned_none">No route marked</string>
+    <string name="planned_unchanged">Nothing new</string>
+    <string name="planned_loaded">Route %1$s loaded</string>
+    <string name="planned_loaded_osmand">Route %1$s loaded and sent to OsmAnd</string>
+    <string name="planned_loaded_no_osmand">Route %1$s loaded, but OsmAnd did not take it (not connected?)</string>
+    <string name="planned_to_osmand">Also send to OsmAnd (shown on the map)</string>
+    <string name="planned_import_failed">Route %1$s could not be read: %2$s</string>
+    <string name="planned_confirm_failed">Route %1$s loaded, but the service could not be told -- trying again later</string>
+    <string name="planned_bad_url">The address is not valid -- it must start with http:// or https://</string>
+    <string name="planned_unauthorized">Access denied (HTTP %1$d)</string>
+    <string name="planned_network">Service not reachable: %1$s</string>
+    <string name="planned_server">The service answered with HTTP %1$d</string>
+    <string name="planned_too_large">The route file is larger than 20 MB</string>
+    <string name="planned_checksum">The route file arrived damaged (checksum) -- trying again later</string>
+    <string name="planned_bad_response">Unexpected answer from the service</string>
 
     <!-- Test ride -->
     <string name="sensor_info">Speed: %1$s\nHeart rate: %2$s\nCadence: %3$s\nPower: %4$s\nElevation: %5$s</string>

@@ -12,7 +12,8 @@ import androidx.core.view.WindowInsetsCompat;
 
 /**
  * Edge to edge on every API level (targetSdk 35 forces it anyway): the dark window background
- * runs behind the system bars, the scroll view keeps clear of them.
+ * runs behind the system bars, the scroll view keeps clear of them (and of the keyboard, to scroll
+ * a text field into view).
  */
 final class EdgeToEdge {
 
@@ -27,7 +28,8 @@ final class EdgeToEdge {
         ViewCompat.setOnApplyWindowInsetsListener(scroll, (v, insets) -> {
             Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, ime.bottom));
             return WindowInsetsCompat.CONSUMED;
         });
     }
