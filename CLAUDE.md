@@ -15,7 +15,9 @@ Testen), [`BUILD.md`](BUILD.md) (Setup/Build) und [`PROTOCOL.md`](PROTOCOL.md)
 (das BLE-Wire-Format -- verbindlicher Vertrag zwischen App und Firmware,
 nicht auf eigene Faust ändern).
 [`PROTOCOL.en.md`](PROTOCOL.en.md) ist die englische Übersetzung -- **bei jeder
-Änderung an `PROTOCOL.md` mitziehen**. Beide erscheinen auf der Doku-Seite
+Änderung an `PROTOCOL.md` mitziehen**. Ebenso haben README, BUILD, FDROID, ROADMAP, DESIGN,
+FIRMWARE-OVERVIEW, BROUTER-VOICEHINTS und LANE-COUNT-BUG eine `*.en.md`-Fassung, die
+mitzuziehen ist. Beide erscheinen auf der Doku-Seite
 <https://euphi.github.io/TRGB-BikeComputer/trailbridge/PROTOCOL/> (wird im
 BikeComputer-Repo gebaut, das die beiden Dateien beim Bauen von hier kopiert).
 Für alles an der Oberfläche zusätzlich [`DESIGN.md`](DESIGN.md): die App
@@ -77,6 +79,18 @@ für TrailBridge liegt hier, nicht im BikeComputer-Repo (dessen
   Unit-Tests geprüft. Firmware-Seite auf `main` im TRGB-BikeComputer-Repo
   (`RouteOverview`/`RouteMonitor`, Screen `RimRidgeRoute`), am Gerät ungetestet --
   Referenz in [`FIRMWARE-OVERVIEW.md`](FIRMWARE-OVERVIEW.md).
+
+- **Geplante Routen (in v0.5.1-rc1, Stand 2026-10-23):** Auto-Download vom
+  BikeLog-Dienst des BikeComputers (`PlannedRouteClient`, `PlannedRouteSettings`, Logik
+  in `TrailBridgeService.checkPlannedRoute()`): beim Start und alle 15 min, nur ohne
+  Navigation/Testfahrt; lädt wie eine von Hand geöffnete GPX (nicht gestartet), meldet per
+  Benachrichtigung und bestätigt per `POST .../fetched?revision=`. Kein Token (Zugriff über
+  das Netz begrenzt), kein Redirect, max. 20 MB + SHA-256. Die Route geht außerdem per
+  AIDL `importGpx` in OsmAnds Track-Liste, und "In OsmAnd starten" ruft `navigateGpx`
+  (`passWholeRoute=true`, sonst gilt eine Rundstrecke am Start als erreicht; die Dateien
+  gehen per FileProvider, ein Roh-String sprengt bei langen Tracks den Binder-Puffer).
+  Vertrag und Gegenstück: `doc/LOGSERVICE.md` ("Routes for TrailBridge") im
+  BikeComputer-Repo. Erste Netzwerk-Funktion der App (`INTERNET`, Klartext-HTTP erlaubt).
 
 ## Verifizierte Fakten, die beim Weiterbauen wichtig sind
 

@@ -7,6 +7,7 @@
 <li>Reads the active route through OsmAnd's official AIDL API: maneuver, distance, street name, the maneuver after that, remaining distance and time</li>
 <li>Lane guidance, whenever OsmAnd provides it</li>
 <li>A second, independent BLE service with the phone's GPS position – works even without OsmAnd running</li>
+<li>GPX routes with its own navigation, elevation profile and route overview; planned routes can be fetched automatically from your own BikeLog service and sent to OsmAnd</li>
 <li>Runs as a foreground service, so it keeps working with the screen locked</li>
 <li>Compact, openly documented TLV protocol (PROTOCOL.md in the repository), pushed via Indicate instead of polling</li>
 </ul>

@@ -1,5 +1,7 @@
 # Roadmap
 
+*[English version](ROADMAP.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 Was an TrailBridge offen ist, grob nach Priorität. Was die App schon kann, steht in
 der [README](README.md). Vieles hier braucht auch eine Änderung am BikeComputer; dessen
 offene Punkte stehen in der
@@ -18,6 +20,7 @@ die Firmware muss den neuen Teil auswerten. Beides nur gemeinsam ändern.
 | Höhe über dem Meeresspiegel im Positions-Frame (`MSL_ALTITUDE_DM`, Android 14+) | in v0.5.0 |
 | Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | in v0.5.0, App-Seite nur mit Unit-Tests geprüft; die Firmware wertet sie aus und zeigt sie auf einem eigenen Screen (auf `main` des BikeComputer-Repos, am Gerät ungetestet), siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
 | Englische Oberfläche (Standard) und Deutsch, je nach Sprache des Handys; auch die Texte an den BikeComputer | in v0.5.0 |
+| Geplante Routen: Auto-Download vom BikeLog-Dienst, Import in OsmAnd, "In OsmAnd starten" | in v0.5.1-rc1; Abruf, OsmAnd-Import und -Start am Gerät ausprobiert, Rundstrecken nur kurz |
 | F-Droid | v0.5.0 als PR bei fdroiddata eingereicht, siehe [FDROID.md](FDROID.md) |
 
 ## Bekannte Fehler

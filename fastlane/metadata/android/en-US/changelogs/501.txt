@@ -1,0 +1,4 @@
+• Planned routes: fetches the route marked in your BikeLog service (at start, then every 15 min, never during a navigation) and loads it
+• Also puts it into OsmAnd's track list; "Start in OsmAnd" starts the navigation there at once, round trips included
+• Notification when a route arrives; compact, collapsible card
+• Network is only used if you enter a service address

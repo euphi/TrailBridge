@@ -1,0 +1,4 @@
+• Geplante Routen: holt die im BikeLog-Dienst markierte Route (beim Start, dann alle 15 Min., nie während einer Navigation) und lädt sie
+• Legt sie auch in OsmAnds Track-Liste; "In OsmAnd starten" startet dort sofort die Navigation, auch bei Rundstrecken
+• Benachrichtigung, wenn eine Route ankommt; kompakte, einklappbare Karte
+• Das Netz wird nur genutzt, wenn du eine Dienst-Adresse einträgst

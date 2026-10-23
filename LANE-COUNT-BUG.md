@@ -1,5 +1,7 @@
 # Untersuchung: Spur-Anzahl-Diskrepanz an Fronmüllerstraße/Schwabacher Straße
 
+*[English version](LANE-COUNT-BUG.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 Stand: 2026-09-20. Entstanden aus einer Firmware-seitigen Debugging-Sitzung
 im TRGB-BikeComputer-Repo (Live-Analyse per `adb logcat` + Serial-Log während
 zweier realer Testfahrten über dieselbe Kreuzung). Hier notiert, damit die

@@ -1,5 +1,7 @@
 # TrailBridge -- Design (Rim & Ridge fürs Handy)
 
+*[English version](DESIGN.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 TrailBridge trägt dieselbe visuelle Identität wie der
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer): **Rim & Ridge**
 -- Anthrazit, ein Akzentton (Messing), dünne Linien, drei Schriften nach Rolle.

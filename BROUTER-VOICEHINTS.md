@@ -1,5 +1,7 @@
 # BRouter / bikerouter.de: warum eine GPX keine Abbiegehinweise hat
 
+*[English version](BROUTER-VOICEHINTS.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 Stand 2026-10-04, Testfahrt Fürth (`Fürth - 44.1 km, 225 hm.gpx`; die Profil-ID `Trekking-tracks`
 heißt in der bikerouter-Oberfläche „Gravel (schnell)" und beruht auf Poutniks Vorlage „Trekking in
 Tracks mode"; vorher gleiches Problem mit anderen Profilen). **Ursache geklärt, korrigiertes

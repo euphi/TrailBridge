@@ -1,5 +1,7 @@
 # Build
 
+*[English version](BUILD.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 ## Setup unter Gentoo (Kommandozeile, kein Android Studio)
 
 1. **JDK 21** (dieselbe Hauptversion wie der Release-Workflow und F-Droids

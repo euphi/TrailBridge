@@ -2,6 +2,8 @@
 
 # TrailBridge
 
+*[English version](README.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 Android-Companion-App zum
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32): reicht
 Navigation aus OsmAnd oder einer GPX-Route, die GPS-Position und das Höhenprofil

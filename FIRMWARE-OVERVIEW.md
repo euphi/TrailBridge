@@ -1,5 +1,7 @@
 # Streckenübersicht: die Seite des BikeComputers
 
+*[English version](FIRMWARE-OVERVIEW.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 Referenz für die Firmware-Seite der Streckenübersicht. Entstanden als Vorlage, inzwischen
 ist sie umgesetzt: im Repo `TRGB-BikeComputer` auf `main` (Commits `43ecfa1` Code,
 `2374ffe` Doku), noch in keinem Firmware-Release und am Gerät ungetestet. Die App-Seite ist in TrailBridge 0.5.0. Das Wire-Format

@@ -1,5 +1,7 @@
 # Veröffentlichung auf F-Droid
 
+*[English version](FDROID.en.md) -- bei Änderungen die englische Fassung mitziehen.*
+
 Was schon im Repo vorbereitet ist:
 
 | Was | Wo |

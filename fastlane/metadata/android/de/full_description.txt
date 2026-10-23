@@ -7,6 +7,7 @@
 <li>Liest die laufende Navigation über OsmAnds offizielle AIDL-Schnittstelle aus: Manöver, Distanz, Straßenname, übernächstes Manöver, Restdistanz und -zeit</li>
 <li>Fahrspur-Empfehlungen, sofern OsmAnd welche liefert</li>
 <li>Zweiter, unabhängiger BLE-Dienst mit der GPS-Position des Handys – funktioniert auch ohne laufendes OsmAnd</li>
+<li>GPX-Routen mit eigener Navigation, Höhenprofil und Streckenübersicht; geplante Routen holt TrailBridge auf Wunsch automatisch aus deinem eigenen BikeLog-Dienst und schickt sie an OsmAnd</li>
 <li>Läuft als Vordergrund-Dienst weiter, auch bei gesperrtem Bildschirm</li>
 <li>Kompaktes, offen dokumentiertes TLV-Protokoll (PROTOCOL.md im Repository), per Indicate statt Polling</li>
 </ul>
