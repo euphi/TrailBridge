@@ -68,6 +68,14 @@ public final class GpxParser {
     private static final Pattern EXIT_BEFORE = Pattern.compile("(?i)(\\d+)\\.?\\s*(?:st|nd|rd|th)?\\s*(?:exit|ausfahrt)");
     private static final Pattern RNDB_CODE = Pattern.compile("^RN[DL]B(\\d+)$");
 
+    /**
+     * A "straight on" less than this far behind another one is the same junction again (a dual
+     * carriageway gets one per lane; test ride 2026-10-24, km 1.55/1.56: 10 m apart) and is
+     * dropped -- otherwise, once the first is passed, the duplicate would stand in front of the
+     * real next hint.
+     */
+    static final double STRAIGHT_DUPLICATE_M = 20;
+
     /** A wpt further from the route than this is a place beside it, not one the rider passes. */
     static final double WAYPOINT_MAX_OFF_ROUTE_M = 100;
 
@@ -287,7 +295,9 @@ public final class GpxParser {
                 for (OsmAndSeg s : osmandSegs) {
                     if (s.index < 0 || s.index >= n) continue;
                     int m = Maneuver.fromOsmAndXml(s.turnType);
-                    if (m == Maneuver.NONE || m == Maneuver.STRAIGHT) continue;
+                    if (m == Maneuver.NONE) continue;
+                    // The first segment starts at the route's start: its "C" is the departure, not a hint.
+                    if (m == Maneuver.STRAIGHT && geo.cum[s.index] == 0) continue;
                     Matcher rb = RNDB_CODE.matcher(s.turnType);
                     steps.add(new GpxRoute.Step(geo.cum[s.index], m,
                             rb.matches() ? Integer.parseInt(rb.group(1)) : 0, ""));
@@ -299,9 +309,10 @@ public final class GpxParser {
                     Pt p = rte.get(i);
                     int[] m = maneuverOf(p);
                     if (m[0] == Maneuver.NONE) continue;
-                    // "Geradeaus" ohne Namen ist auf dem Display nur Rauschen (BRouter
-                    // schreibt es an jeder Kreuzung, an der man geradeaus bleibt).
-                    if (m[0] == Maneuver.STRAIGHT && (p.name == null || p.name.isEmpty())) continue;
+                    // "Straight on" stays (it used to be dropped as noise when unnamed). BRouter
+                    // writes it only where going straight is not obvious -- across a road onto a
+                    // track, just before a turn onto a parallel way (test ride 2026-10-24: 29 of 133
+                    // hints, about one per 1.5 km, all checked on the map and all of use).
                     double at;
                     if (geometry == rte) {
                         at = geo.cum[i];
@@ -313,6 +324,7 @@ public final class GpxParser {
                 }
             }
 
+            steps = withoutDuplicateStraights(steps);
             if (hasInfo && geometry == trk && !rte.isEmpty() && osmandSegs.isEmpty() && !hasTurn(steps)) {
                 // A track with a route that says nothing about turns: bikerouter.de and others write
                 // just the way points (start, vias, destination) as rtept -- "Start" and "Ziel" read
@@ -332,6 +344,21 @@ public final class GpxParser {
                 }
             }
             return new GpxRoute(name, lat, lon, ele, time, hr, cad, power, steps, hasInfo, waypoints);
+        }
+
+        /** Drops a STRAIGHT that follows another STRAIGHT by less than STRAIGHT_DUPLICATE_M. */
+        private static List<GpxRoute.Step> withoutDuplicateStraights(List<GpxRoute.Step> steps) {
+            List<GpxRoute.Step> sorted = new ArrayList<>(steps);
+            java.util.Collections.sort(sorted, (a, b) -> Double.compare(a.distM, b.distM));
+            List<GpxRoute.Step> out = new ArrayList<>();
+            GpxRoute.Step prev = null;
+            for (GpxRoute.Step st : sorted) {
+                boolean duplicate = st.maneuver == Maneuver.STRAIGHT && prev != null
+                        && prev.maneuver == Maneuver.STRAIGHT && st.distM - prev.distM < STRAIGHT_DUPLICATE_M;
+                if (!duplicate) out.add(st);
+                prev = st;
+            }
+            return out;
         }
 
         /** A manoeuvre that is a turn (not just the start and the destination). */

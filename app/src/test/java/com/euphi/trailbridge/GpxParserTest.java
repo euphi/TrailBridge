@@ -111,6 +111,93 @@ public class GpxParserTest {
         assertEquals(300, r.steps.get(1).distM, 12);
     }
 
+    /** BRouter, turnInstructionMode 3: the hint sits in the rtept's extensions. */
+    private static String brouterHint(double east, double north, String turn, int angle) {
+        return rtept(east, north, "<desc>hint</desc><extensions><turn>" + turn + "</turn><turn-angle>" + angle
+                + "</turn-angle></extensions>");
+    }
+
+    private static String trkOf(double[][] corners) {
+        GpxRoute base = Routes.polyline(corners, d -> 100);
+        StringBuilder trk = new StringBuilder("<trk><trkseg>");
+        for (int i = 0; i < base.pointCount(); i++) {
+            trk.append("<trkpt lat=\"").append(base.lat[i]).append("\" lon=\"").append(base.lon[i]).append("\"/>");
+        }
+        return trk.append("</trkseg></trk>").toString();
+    }
+
+    @Test
+    public void straightOnIsKept() throws Exception {
+        // Test ride 2026-10-24 (BRouter GPX, route c3522752): a dropped "C" sent the rider the wrong way
+        String gpx = "<gpx creator=\"OsmAndRouter\"><rte>" + rtept(0, 0, "<desc>start</desc>")
+                + brouterHint(0, 100, "C", 3)        // km 16.96: across the road ...
+                + brouterHint(0, 110, "TL", -100)    // ... then 10 m on left onto the parallel way
+                + brouterHint(0, 300, "C", 3)        // km 23.15: across the FÜ19 ...
+                + brouterHint(0, 334, "TSLL", -28)   // ... then 34 m on slight left
+                + brouterHint(0, 500, "C", 0)        // km 36.62/36.65: two "C" 30 m apart are two junctions
+                + brouterHint(0, 530, "C", 2)
+                + brouterHint(0, 800, "C", 1)        // a lone one, far from any other hint
+                + rtept(0, 1000, "<desc>destination</desc>") + "</rte>"
+                + trkOf(new double[][]{{0, 0}, {0, 1000}}) + "</gpx>";
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertTrue(r.hasRoutingInfo);
+        int[] want = {Maneuver.DEPART, Maneuver.STRAIGHT, Maneuver.TURN_LEFT, Maneuver.STRAIGHT,
+                Maneuver.TURN_SLIGHT_LEFT, Maneuver.STRAIGHT, Maneuver.STRAIGHT, Maneuver.STRAIGHT, Maneuver.ARRIVE};
+        double[] at = {0, 100, 110, 300, 334, 500, 530, 800, 1000};
+        assertEquals(want.length, r.steps.size());
+        for (int i = 0; i < want.length; i++) {
+            assertEquals("step " + i, want[i], r.steps.get(i).maneuver);
+            assertEquals("step " + i, at[i], r.steps.get(i).distM, 2);
+        }
+    }
+
+    @Test
+    public void duplicateStraightOnIsDropped() throws Exception {
+        // km 1.55/1.56: "C +0" and "C +1" 10 m apart at a dual carriageway, then TR 140 m on
+        String gpx = "<gpx creator=\"OsmAndRouter\"><rte>" + rtept(0, 0, "<desc>start</desc>")
+                + brouterHint(0, 300, "C", 0)
+                + brouterHint(0, 310, "C", 1)
+                + brouterHint(0, 450, "TR", 90)
+                + rtept(300, 450, "<desc>destination</desc>") + "</rte>"
+                + trkOf(new double[][]{{0, 0}, {0, 450}, {300, 450}}) + "</gpx>";
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertEquals(4, r.steps.size());
+        assertEquals(Maneuver.STRAIGHT, r.steps.get(1).maneuver);
+        assertEquals(300, r.steps.get(1).distM, 2);
+        assertEquals(Maneuver.TURN_RIGHT, r.steps.get(2).maneuver);
+
+        // Past the first "C", the turn is next -- not the duplicate 5 m ahead
+        RouteNavigator n = new RouteNavigator(r);
+        RouteNavigator.Result before = n.onFix(Routes.lat(250), Routes.lon(0), 4.0, 253);
+        assertEquals(Maneuver.STRAIGHT, before.nav.maneuver);
+        assertEquals(Maneuver.TURN_RIGHT, before.nav.nextManeuver);
+        assertEquals(150, before.nav.nextManeuverDistanceM, 3);
+        RouteNavigator.Result past = n.onFix(Routes.lat(305), Routes.lon(0), 4.0, 253);
+        assertEquals(Maneuver.TURN_RIGHT, past.nav.maneuver);
+        assertEquals(145, past.nav.maneuverDistanceM, 3);
+    }
+
+    @Test
+    public void osmAndStraightOnIsKeptExceptAtTheStart() throws Exception {
+        GpxRoute base = Routes.polyline(L, d -> 100);
+        StringBuilder pts = new StringBuilder();
+        for (int i = 0; i < base.pointCount(); i++) {
+            pts.append("<trkpt lat=\"").append(base.lat[i]).append("\" lon=\"").append(base.lon[i]).append("\"/>");
+        }
+        String gpx = "<gpx xmlns:osmand=\"https://osmand.net\"><trk><trkseg>" + pts
+                + "<extensions><osmand:route>"
+                + "<osmand:segment id=\"1\" length=\"150\" startTrkptIdx=\"0\" turnType=\"C\"/>"
+                + "<osmand:segment id=\"2\" length=\"150\" startTrkptIdx=\"15\" turnType=\"C\"/>"
+                + "<osmand:segment id=\"3\" length=\"10\" startTrkptIdx=\"16\" turnType=\"C\"/>"
+                + "<osmand:segment id=\"4\" length=\"300\" startTrkptIdx=\"30\" turnType=\"TL\"/>"
+                + "</osmand:route></extensions></trkseg></trk></gpx>";
+        GpxRoute r = GpxParser.parse(Routes.stream(gpx), "x");
+        assertEquals(4, r.steps.size());                      // DEPART, C, TL, ARRIVE
+        assertEquals(Maneuver.STRAIGHT, r.steps.get(1).maneuver);
+        assertEquals(base.cum[15], r.steps.get(1).distM, 0.1);
+        assertEquals(Maneuver.TURN_LEFT, r.steps.get(2).maneuver);
+    }
+
     private static String wpt(double east, double north, String body) {
         return "<wpt lat=\"" + Routes.lat(north) + "\" lon=\"" + Routes.lon(east) + "\">" + body + "</wpt>";
     }
