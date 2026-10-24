@@ -7,8 +7,7 @@
 Android companion app for the
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32): passes
 navigation from OsmAnd or a GPX route, the GPS position and the elevation profile of
-the route ahead on to the bike computer over BLE -- as a replacement for Komoot's
-discontinued BLE navigation service.
+the route ahead on to the bike computer over BLE.
 
 > ## 📖 Manual, usage and screenshots: <https://euphi.github.io/TRGB-BikeComputer/trailbridge/>
 >
@@ -17,7 +16,8 @@ discontinued BLE navigation service.
 > This README is only the overview for developers.
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_app.png" height="480" alt="TrailBridge app">
+  <img src="fastlane/metadata/android/de/images/phoneScreenshots/1_main.png" height="480" alt="TrailBridge: main screen (German UI)">
+  <img src="fastlane/metadata/android/de/images/phoneScreenshots/2_navi.png" height="480" alt="TrailBridge: Navi mode with elevation profile (German UI)">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_bikecomputer.jpg" height="480" alt="TRGB-BikeComputer showing the forwarded turn maneuver">
 </p>
 

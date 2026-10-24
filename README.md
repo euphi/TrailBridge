@@ -7,8 +7,7 @@
 Android-Companion-App zum
 [TRGB-BikeComputer](https://github.com/euphi/TRGB-BikeComputer) (ESP32): reicht
 Navigation aus OsmAnd oder einer GPX-Route, die GPS-Position und das Höhenprofil
-der Strecke voraus per BLE weiter -- als Ersatz für Komoots eingestellten
-BLE-Navigationsdienst.
+der Strecke voraus per BLE weiter.
 
 > ## 📖 Anleitung, Bedienung und Screenshots: <https://euphi.github.io/TRGB-BikeComputer/de/trailbridge/>
 >
@@ -17,7 +16,8 @@ BLE-Navigationsdienst.
 > Diese README ist nur der Überblick für Entwickler.
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_app.png" height="480" alt="TrailBridge-App">
+  <img src="fastlane/metadata/android/de/images/phoneScreenshots/1_main.png" height="480" alt="TrailBridge: Hauptscreen">
+  <img src="fastlane/metadata/android/de/images/phoneScreenshots/2_navi.png" height="480" alt="TrailBridge: Navi-Modus mit Höhenprofil">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_bikecomputer.jpg" height="480" alt="TRGB-BikeComputer zeigt das weitergeleitete Abbiegemanöver">
 </p>
 
