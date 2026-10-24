@@ -2,3 +2,4 @@
 • Legt sie auch in OsmAnds Track-Liste; "In OsmAnd starten" startet dort sofort die Navigation, auch bei Rundstrecken
 • Benachrichtigung, wenn eine Route ankommt; kompakte, einklappbare Karte
 • Das Netz wird nur genutzt, wenn du eine Dienst-Adresse einträgst
+• GPX-Navigation: „geradeaus“ aus der Datei wird jetzt angezeigt
