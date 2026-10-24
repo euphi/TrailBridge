@@ -2,7 +2,7 @@
 
 *[English version below.](#trailbridge-051----release-notes-english)*
 
-Gegenüber 0.5.0. Vorabversion: `v0.5.1-rc1`. Abruf, OsmAnd-Import und -Start sind am
+Gegenüber 0.5.0. Vorabversionen: `v0.5.1-rc1`, `v0.5.1-rc2`. Abruf, OsmAnd-Import und -Start sind am
 Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weiter aus.
 
 ## Neu
@@ -23,7 +23,12 @@ Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weit
 - **Neue, einklappbare Karte "Geplante Routen"** im Hauptscreen: zugeklappt nur Status,
   "Prüfen" und "In OsmAnd starten"; aufgeklappt Adresse des Dienstes, Hilfe und der
   OsmAnd-Schalter.
-- **Englische Dokumentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
+- **GPX-Navigation zeigt "geradeaus" an** (rc2). Ein "geradeaus" aus der Datei wurde bisher
+  verworfen; BRouter schreibt es aber nur dort, wo Geradeausfahren nicht offensichtlich ist
+  (über eine Straße auf einen Weg, vor einer Abbiegung auf einen Parallelweg). Es bleibt jetzt
+  erhalten, ein zweites innerhalb von 20 m (Fahrbahntrennung) fällt weg, und das "geradeaus" am
+  Streckenanfang zählt nicht als Hinweis.
+- **Kürzere README** mit Verweis auf die Anleitung auf github.io; **englische Dokumentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
   BROUTER-VOICEHINTS und LANE-COUNT-BUG gibt es jetzt auch als `*.en.md`.
 
 ## Hinweise
@@ -50,7 +55,7 @@ Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weit
 
 # TrailBridge 0.5.1 -- Release Notes (English)
 
-Changes since 0.5.0. Pre-release: `v0.5.1-rc1`. Fetching, the OsmAnd import and start have
+Changes since 0.5.0. Pre-releases: `v0.5.1-rc1`, `v0.5.1-rc2`. Fetching, the OsmAnd import and start have
 been tried on the device; a real ride with 0.5.0's GPX features is still to come.
 
 ## New
@@ -69,7 +74,12 @@ been tried on the device; a real ride with 0.5.0's GPX features is still to come
   with it, so that the OsmAnd data reaches the BikeComputer.
 - **New, collapsible "Planned routes" card** on the main screen: collapsed only status,
   "Check" and "Start in OsmAnd"; opened the service address, help and the OsmAnd switch.
-- **English documentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
+- **GPX navigation shows "straight on"** (rc2). A "straight on" from the file used to be
+  dropped; BRouter writes it only where going straight is not obvious (across a road onto a
+  track, before a turn onto a parallel way). It is now kept, a second one within 20 m (dual
+  carriageway) is dropped, and the "straight on" at the start of the route does not count as a
+  hint.
+- **Shorter README** pointing to the manual on github.io; **English documentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
   BROUTER-VOICEHINTS and LANE-COUNT-BUG are now also available as `*.en.md`.
 
 ## Notes
