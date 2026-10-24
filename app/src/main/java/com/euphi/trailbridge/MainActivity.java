@@ -159,6 +159,7 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
         });
         setupTestPanel();
         setupPlannedCard();
+        setupAutoStopCard();
         updateRouteButton();
         handleIntent(getIntent());
     }
@@ -251,6 +252,25 @@ public class MainActivity extends AppCompatActivity implements TrailBridgeServic
             if (service != null) service.startRouteInOsmAnd();
         });
         applyPlannedExpanded();
+    }
+
+    /** One button that cycles through the idle times (AutoStopSettings) and shows the current one. */
+    private void setupAutoStopCard() {
+        Button button = findViewById(R.id.autoStopButton);
+        AutoStopSettings settings = new AutoStopSettings(this);
+        button.setText(autoStopLabel(settings.minutes()));
+        button.setOnClickListener(v -> {
+            int minutes = AutoStopSettings.next(settings.minutes());
+            settings.setMinutes(minutes);
+            button.setText(autoStopLabel(minutes));
+            if (service != null) service.onAutoStopChanged();
+        });
+    }
+
+    private String autoStopLabel(int minutes) {
+        if (minutes <= 0) return getString(R.string.auto_stop_never);
+        return minutes % 60 == 0 ? getString(R.string.auto_stop_after_hours, minutes / 60)
+                : getString(R.string.auto_stop_after, minutes);
     }
 
     private void applyPlannedExpanded() {

@@ -1,6 +1,7 @@
 package com.euphi.trailbridge;
 
 import android.Manifest;
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -91,9 +92,14 @@ public class TrailBridgeService extends Service
          */
         default void onPlannedRouteStatus(String status, boolean error) {
         }
+        /** The navi mode (NaviActivity) is the listener: the rider uses the phone's own screen. */
+        default boolean isNaviMode() {
+            return false;
+        }
     }
 
     public static final String ACTION_STOP = "com.euphi.trailbridge.action.STOP";
+    private static final String ACTION_IDLE_CHECK = "com.euphi.trailbridge.action.IDLE_CHECK";
     private static final String CHANNEL_ID = "trailbridge_running";
     private static final int NOTIFICATION_ID = 1;
     private static final String TAG = "TrailBridge";
@@ -150,6 +156,9 @@ public class TrailBridgeService extends Service
     @Nullable private ProfileFrame lastProfile;
     private final Runnable playbackTick = this::onPlaybackTick;
 
+    // ---- Selbst beenden bei Leerlauf (siehe IdleWatch) ----
+    private IdleWatch idleWatch;
+
     // ---- Geplante Routen (BikeLog) ----
     // Eigener Thread: ein haengendes Netz soll das Parsen einer GPX nicht aufhalten.
     private final ExecutorService netWorker = Executors.newSingleThreadExecutor();
@@ -182,6 +191,7 @@ public class TrailBridgeService extends Service
         osmAndLink = new OsmAndLink(this, this);
         gpsLink = new GpsLink(this, this);
         gattServer = new BikeComputerGattServer(this, this);
+        idleWatch = new IdleWatch(SystemClock.elapsedRealtime());
         createNotificationChannel();
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         emulateHr = prefs.getBoolean(PREF_EMULATE_HR, true);
@@ -196,6 +206,16 @@ public class TrailBridgeService extends Service
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (intent != null && ACTION_IDLE_CHECK.equals(intent.getAction())) {
+            if (!started) {
+                // The alarm outlived the process: there is nothing running that could be idle.
+                stopSelf();
+                return START_NOT_STICKY;
+            }
+            // Not over yet (the rider came back, or the time was changed): the alarm goes on.
+            if (!evaluateIdle()) scheduleIdleAlarm();
+            return START_STICKY;
+        }
         startForegroundNotification();
         if (!started) {
             started = true;
@@ -209,6 +229,7 @@ public class TrailBridgeService extends Service
         // Standort ist optional und kann später dazukommen: GpsLink.start() tut nichts, wenn
         // es schon läuft, und meldet sonst die fehlende Berechtigung.
         gpsLink.start();
+        scheduleIdleAlarm();
         // Beim Start des Dienstes; danach auch bei jedem Öffnen der App, falls der Timer im
         // Schlaf des Handys stehen geblieben ist und die letzte Abfrage lange her ist.
         if (SystemClock.elapsedRealtime() - plannedCheckedAtMs >= PLANNED_INTERVAL_MS) {
@@ -221,6 +242,7 @@ public class TrailBridgeService extends Service
     public void onDestroy() {
         // Auch die Ergebnisse der Worker: sie duerfen nach dem Ende nichts mehr anstossen.
         mainHandler.removeCallbacksAndMessages(null);
+        cancelIdleAlarm();
         worker.shutdownNow();
         netWorker.shutdownNow();
         osmAndLink.stop();
@@ -239,6 +261,7 @@ public class TrailBridgeService extends Service
 
     public void setUiListener(@Nullable UiListener listener) {
         this.uiListener = listener;
+        restartIdle();
         if (listener != null) {
             // aktuellen Stand sofort nachreichen
             listener.onStatusChanged(lastStatus, lastStatusKind);
@@ -260,7 +283,73 @@ public class TrailBridgeService extends Service
      * one has already registered.
      */
     public void removeUiListener(UiListener listener) {
-        if (uiListener == listener) uiListener = null;
+        if (uiListener == listener) {
+            uiListener = null;
+            restartIdle();
+        }
+    }
+
+    /** The rider changed how long the service may idle (AutoStopSettings). */
+    public void onAutoStopChanged() {
+        scheduleIdleAlarm();
+    }
+
+    // ---- Selbst beenden ----
+
+    private long idleTimeoutMs() {
+        return new AutoStopSettings(this).minutes() * 60_000L;
+    }
+
+    private PendingIntent idleAlarmIntent() {
+        Intent intent = new Intent(this, TrailBridgeService.class).setAction(ACTION_IDLE_CHECK);
+        return PendingIntent.getService(this, 1, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    /**
+     * Sets the alarm for the end of the idle time, or cancels it (active, or switched off). An alarm, not
+     * a Handler delay: that one stands still in the phone's deep sleep, and the idle phone in a pocket is
+     * exactly the case. Inexact, but allowed while idle -- a few minutes late do not matter.
+     */
+    private void scheduleIdleAlarm() {
+        long due = idleWatch.dueAtMs(idleTimeoutMs());
+        if (due < 0) {
+            cancelIdleAlarm();
+            return;
+        }
+        getSystemService(AlarmManager.class).setAndAllowWhileIdle(
+                AlarmManager.ELAPSED_REALTIME_WAKEUP, due, idleAlarmIntent());
+    }
+
+    private void cancelIdleAlarm() {
+        getSystemService(AlarmManager.class).cancel(idleAlarmIntent());
+    }
+
+    /** Somebody opened or left the app: the idle time, if there is one, starts over. */
+    private void restartIdle() {
+        idleWatch.restart(SystemClock.elapsedRealtime());
+        if (!evaluateIdle()) scheduleIdleAlarm();
+    }
+
+    /**
+     * Looks at what is going on now: starts or ends the idle time, and ends the service when it is over.
+     * @return whether it ended the service
+     */
+    private boolean evaluateIdle() {
+        long now = SystemClock.elapsedRealtime();
+        boolean active = IdleWatch.active(lastSubscriberCount > 0,
+                uiListener != null && uiListener.isNaviMode(), IdleWatch.moving(lastRealPosition));
+        boolean changed = idleWatch.update(now, active);
+        if (idleWatch.expired(now, idleTimeoutMs())) {
+            Log.i(TAG, "Nothing to do for " + new AutoStopSettings(this).minutes() + " min: ending the service");
+            cancelIdleAlarm();
+            // Still bound (a screen is open), stopSelf alone would leave the notification and the GPS on.
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            gpsLink.stop();
+            stopSelf();
+            return true;
+        }
+        if (changed) scheduleIdleAlarm();
+        return false;
     }
 
     /** Sends the profile to the BikeComputer (null: none any more) and mirrors it to the UI. */
@@ -873,6 +962,7 @@ public class TrailBridgeService extends Service
     @Override
     public void onPositionUpdate(PositionState state) {
         lastRealPosition = state;
+        evaluateIdle();
         // Waehrend einer Testfahrt gilt die simulierte Position, nicht der echte Fix.
         if (playbackActive) return;
         lastPositionState = state;
@@ -886,6 +976,7 @@ public class TrailBridgeService extends Service
     @Override
     public void onSubscriberCountChanged(int count) {
         lastSubscriberCount = count;
+        evaluateIdle();
         if (uiListener != null) uiListener.onSubscriberCountChanged(count);
     }
 

@@ -144,6 +144,11 @@
 
     <!-- Geplante Routen (BikeLog-Dienst) -->
     <string name="card_planned">Geplante Routen</string>
+    <string name="card_auto_stop">Energie sparen</string>
+    <string name="auto_stop_hint">TrailBridge beendet sich selbst (GPS aus, Benachrichtigung weg), wenn so lange nichts Sinnvolles passiert ist: kein BikeComputer verbunden -- im Navi-Modus nur, solange du dich auch nicht wirklich bewegst. Eine Testfahrt zählt nur mit BikeComputer. Zum erneuten Starten die App öffnen.</string>
+    <string name="auto_stop_after">Nach %1$d Min.</string>
+    <string name="auto_stop_after_hours">Nach %1$d Std.</string>
+    <string name="auto_stop_never">Nie</string>
     <string name="planned_hint">TrailBridge holt die Route, die du im BikeLog-Dienst markierst, beim Start und danach alle 15 Minuten -- nicht aber während einer Navigation oder Testfahrt. Die Route wird nur geladen (und in OsmAnd angezeigt); starten tust du sie selbst.</string>
     <string name="planned_settings">Einstellungen</string>
     <string name="planned_settings_close">Einklappen</string>

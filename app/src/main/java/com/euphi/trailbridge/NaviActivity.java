@@ -162,4 +162,9 @@ public class NaviActivity extends AppCompatActivity implements TrailBridgeServic
     @Override
     public void onPlaybackChanged(@Nullable PlaybackState state) {
     }
+
+    @Override
+    public boolean isNaviMode() {
+        return true;
+    }
 }

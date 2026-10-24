@@ -518,6 +518,40 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- ============ Energie sparen: Dienst beendet sich bei Leerlauf (siehe IdleWatch) ============ -->
+    <LinearLayout
+        android:id="@+id/autoStopCard"
+        style="@style/TB.Card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/TB.Eyebrow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/card_auto_stop" />
+
+            <Button
+                android:id="@+id/autoStopButton"
+                style="@style/TB.Button.Small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/TB.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/auto_stop_hint"
+            android:textSize="11sp" />
+    </LinearLayout>
+
     <!-- ============ Position / Navigation (auch im Navi-Modus, siehe NaviActivity) ============ -->
     <include layout="@layout/card_position" />
 

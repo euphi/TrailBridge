@@ -36,6 +36,9 @@ der Strecke voraus per BLE weiter.
   Route automatisch ab, lädt sie, legt sie auf Wunsch in OsmAnds Track-Liste und startet sie
   mit "In OsmAnd starten" dort direkt. Die einzige Funktion mit Netzzugriff (`INTERNET`);
   ohne eingetragene Adresse bleibt sie aus.
+- **Energie sparen:** TrailBridge beendet sich selbst (GPS aus, Benachrichtigung weg), wenn
+  30 Minuten lang (einstellbar, auch "Nie") kein BikeComputer verbunden war; im Navi-Modus
+  nur, wenn du dich zusätzlich nicht wirklich bewegst. Zum Weiterfahren die App öffnen.
 - **Testfahrt:** spielt die geladene GPX als Fake-Position samt simulierten Sensorwerten ab
   (immer als "simuliert" gekennzeichnet) -- zum Testen ohne Fahrt.
 - **Navi-Modus und Moduswahl:** ein reduzierter Screen für unterwegs; der Hauptscreen zeigt

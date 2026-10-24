@@ -21,6 +21,7 @@ firmware has to evaluate the new part. Change both only together.
 | Route overview: destination, waypoints (`wpt`) and climbs of the GPX route for reading | in v0.5.0, app side only checked with unit tests; the firmware evaluates it and shows it on a screen of its own (on `main` of the BikeComputer repo, untested on the device), see [FIRMWARE-OVERVIEW.en.md](FIRMWARE-OVERVIEW.en.md) |
 | English interface (default) and German, depending on the phone's language; also the texts to the BikeComputer | in v0.5.0 |
 | Planned routes: auto-download from the BikeLog service, import into OsmAnd, "Start in OsmAnd" | in v0.5.1-rc1; fetching, OsmAnd import and start tried on the device, round trips only briefly |
+| Ending itself when idle (no BikeComputer connected; navi mode only without real movement; 30 min by default, adjustable): saves GPS and battery | in v0.5.1-rc3; tested with unit tests only, not on the device yet |
 | F-Droid | v0.5.0 submitted as a PR to fdroiddata, see [FDROID.en.md](FDROID.en.md) |
 
 ## Known bugs

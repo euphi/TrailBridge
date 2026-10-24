@@ -21,6 +21,7 @@ die Firmware muss den neuen Teil auswerten. Beides nur gemeinsam ändern.
 | Streckenübersicht: Ziel, Wegpunkte (`wpt`) und Anstiege der GPX-Route zum Lesen | in v0.5.0, App-Seite nur mit Unit-Tests geprüft; die Firmware wertet sie aus und zeigt sie auf einem eigenen Screen (auf `main` des BikeComputer-Repos, am Gerät ungetestet), siehe [FIRMWARE-OVERVIEW.md](FIRMWARE-OVERVIEW.md) |
 | Englische Oberfläche (Standard) und Deutsch, je nach Sprache des Handys; auch die Texte an den BikeComputer | in v0.5.0 |
 | Geplante Routen: Auto-Download vom BikeLog-Dienst, Import in OsmAnd, "In OsmAnd starten" | in v0.5.1-rc1; Abruf, OsmAnd-Import und -Start am Gerät ausprobiert, Rundstrecken nur kurz |
+| Selbst beenden bei Leerlauf (kein BikeComputer verbunden; Navi-Modus nur ohne echte Bewegung; Standard 30 Min., einstellbar): spart GPS und Akku | in v0.5.1-rc3; nur mit Unit-Tests geprüft, am Gerät noch nicht |
 | F-Droid | v0.5.0 als PR bei fdroiddata eingereicht, siehe [FDROID.md](FDROID.md) |
 
 ## Bekannte Fehler

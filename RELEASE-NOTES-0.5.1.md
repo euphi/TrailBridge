@@ -2,7 +2,7 @@
 
 *[English version below.](#trailbridge-051----release-notes-english)*
 
-Gegenüber 0.5.0. Vorabversionen: `v0.5.1-rc1`, `v0.5.1-rc2`. Abruf, OsmAnd-Import und -Start sind am
+Gegenüber 0.5.0. Vorabversionen: `v0.5.1-rc1`, `v0.5.1-rc2`, `v0.5.1-rc3`. Abruf, OsmAnd-Import und -Start sind am
 Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weiter aus.
 
 ## Neu
@@ -28,6 +28,14 @@ Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weit
   (über eine Straße auf einen Weg, vor einer Abbiegung auf einen Parallelweg). Es bleibt jetzt
   erhalten, ein zweites innerhalb von 20 m (Fahrbahntrennung) fällt weg, und das "geradeaus" am
   Streckenanfang zählt nicht als Hinweis.
+- **Energie sparen: TrailBridge beendet sich bei Leerlauf selbst** (rc3). Bisher forderte der
+  Dienst das GPS jede Sekunde an, solange er lief, auch Stunden nach der Fahrt ohne BikeComputer.
+  Jetzt läuft ein Timer, wenn nichts Sinnvolles passiert: kein BikeComputer verbunden; im
+  Navi-Modus gilt echte Bewegung (GPS-Geschwindigkeit ab 1 m/s) als Aktivität, eine
+  Testfahrt nur mit BikeComputer. Nach 30 Minuten (einstellbar: 15 Min., 1 Std., 2 Std. oder
+  "Nie", Karte "Energie sparen") endet der Dienst: GPS aus, Benachrichtigung weg. Der Timer ist ein
+  Alarm und läuft auch im Tiefschlaf des Handys (ungenau, einige Minuten Verzug sind möglich).
+  Die App zu öffnen oder zu verlassen startet die Zeit neu; zum Weiterfahren die App öffnen.
 - **Kürzere README** mit Verweis auf die Anleitung auf github.io; **englische Dokumentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
   BROUTER-VOICEHINTS und LANE-COUNT-BUG gibt es jetzt auch als `*.en.md`.
 
@@ -55,7 +63,7 @@ Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weit
 
 # TrailBridge 0.5.1 -- Release Notes (English)
 
-Changes since 0.5.0. Pre-releases: `v0.5.1-rc1`, `v0.5.1-rc2`. Fetching, the OsmAnd import and start have
+Changes since 0.5.0. Pre-releases: `v0.5.1-rc1`, `v0.5.1-rc2`, `v0.5.1-rc3`. Fetching, the OsmAnd import and start have
 been tried on the device; a real ride with 0.5.0's GPX features is still to come.
 
 ## New
@@ -79,6 +87,14 @@ been tried on the device; a real ride with 0.5.0's GPX features is still to come
   track, before a turn onto a parallel way). It is now kept, a second one within 20 m (dual
   carriageway) is dropped, and the "straight on" at the start of the route does not count as a
   hint.
+- **Energy saving: TrailBridge ends itself when idle** (rc3). Until now the service asked for the
+  GPS every second for as long as it ran, even hours after the ride with no BikeComputer
+  connected. Now a timer runs when nothing useful happens: no BikeComputer connected; in navi
+  mode real movement (GPS speed from 1 m/s) counts as activity, a test ride only with a
+  BikeComputer. After 30 minutes (adjustable: 15 min, 1 h, 2 h or "Never", card "Energy
+  saving") the service ends: GPS off, notification gone. The timer is an alarm and also runs
+  in the phone's deep sleep (inexact, a few minutes' delay are possible). Opening or leaving
+  the app starts the time over; open the app to carry on.
 - **Shorter README** pointing to the manual on github.io; **English documentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
   BROUTER-VOICEHINTS and LANE-COUNT-BUG are now also available as `*.en.md`.
 
