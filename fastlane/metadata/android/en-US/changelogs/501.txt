@@ -1,6 +1,6 @@
-• Planned routes: fetches the route marked in your BikeLog service (at start, then every 15 min, never during a navigation) and loads it
+• Planned routes: fetches the route marked in your BikeLog service (at start, then every 15 min, never during a navigation)
 • Also puts it into OsmAnd's track list; "Start in OsmAnd" starts the navigation there at once
-• Notification when a route arrives
-• Network only with a service address entered
+• Notification for a new route; network only with an address entered
 • GPX navigation: "straight on" is shown
-• Energy saving: ends itself after 30 min without a BikeComputer (GPS off), adjustable
+• Energy saving: ends itself after 30 min without a BikeComputer, adjustable
+• Fixes: GPS fix age, OsmAnd binding, idle stop with the app open

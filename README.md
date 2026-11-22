@@ -38,7 +38,8 @@ der Strecke voraus per BLE weiter.
   ohne eingetragene Adresse bleibt sie aus.
 - **Energie sparen:** TrailBridge beendet sich selbst (GPS aus, Benachrichtigung weg), wenn
   30 Minuten lang (einstellbar, auch "Nie") kein BikeComputer verbunden war; im Navi-Modus
-  nur, wenn du dich zusätzlich nicht wirklich bewegst. Zum Weiterfahren die App öffnen.
+  nur, wenn du dich zusätzlich nicht wirklich bewegst. Zum Weiterfahren die App öffnen; ist
+  sie noch offen, reicht es, eine Route zu starten oder den BikeComputer zu verbinden.
 - **Testfahrt:** spielt die geladene GPX als Fake-Position samt simulierten Sensorwerten ab
   (immer als "simuliert" gekennzeichnet) -- zum Testen ohne Fahrt.
 - **Navi-Modus und Moduswahl:** ein reduzierter Screen für unterwegs; der Hauptscreen zeigt

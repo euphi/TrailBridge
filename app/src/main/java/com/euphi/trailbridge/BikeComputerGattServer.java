@@ -18,6 +18,8 @@ import android.content.Context;
 import android.os.ParcelUuid;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * The BLE peripheral (server) side of PROTOCOL.md. The BikeComputer stays the
@@ -84,18 +87,29 @@ public class BikeComputerGattServer {
         final BluetoothGattCharacteristic characteristic;
         final Set<BluetoothDevice> subscribers = new HashSet<>();
         volatile byte[] lastFrame;
+        /**
+         * Re-encodes the last state at the moment of sending, for a frame whose
+         * content depends on *when* it goes out (the position frame's FIX_AGE_MS,
+         * see PROTOCOL.md). Null: the last frame's bytes are repeated as they are.
+         */
+        @Nullable final Supplier<byte[]> refresh;
 
         /** Event-driven channels (profile) don't repeat their last frame. */
         final Runnable heartbeat = new Runnable() {
             @Override
             public void run() {
-                send(Channel.this, lastFrame);
+                send(Channel.this, currentFrame());
                 mainHandler.postDelayed(this, HEARTBEAT_INTERVAL_MS);
             }
         };
 
         Channel(UUID charUuid, byte[] initialFrame) {
+            this(charUuid, initialFrame, null);
+        }
+
+        Channel(UUID charUuid, byte[] initialFrame, @Nullable Supplier<byte[]> refresh) {
             this.lastFrame = initialFrame;
+            this.refresh = refresh;
             characteristic = new BluetoothGattCharacteristic(
                     charUuid,
                     BluetoothGattCharacteristic.PROPERTY_INDICATE | BluetoothGattCharacteristic.PROPERTY_READ,
@@ -105,6 +119,12 @@ public class BikeComputerGattServer {
                     BluetoothGattDescriptor.PERMISSION_READ | BluetoothGattDescriptor.PERMISSION_WRITE);
             characteristic.addDescriptor(cccd);
             characteristic.setValue(initialFrame);
+        }
+
+        /** The frame to send or serve right now: freshly encoded if the channel can, else the last one. */
+        byte[] currentFrame() {
+            byte[] fresh = refresh == null ? null : refresh.get();
+            return fresh != null ? fresh : lastFrame;
         }
 
         void removeSubscriber(BluetoothDevice device) {
@@ -127,6 +147,10 @@ public class BikeComputerGattServer {
     private Channel navChannel;
     private Channel positionChannel;
     private Channel profileChannel;
+    // The last position as a state, not as bytes: every send of it (heartbeat
+    // included) encodes FIX_AGE_MS afresh, so the BikeComputer can tell a
+    // fix that is being repeated from a fresh one (PROTOCOL.md "GPS-Positions-Service").
+    @Nullable private volatile PositionState lastPosition;
     private final Map<UUID, Channel> channelsByCharUuid = new HashMap<>();
 
     // The route overview is only read, never indicated: no Channel, no
@@ -180,7 +204,10 @@ public class BikeComputerGattServer {
             }
 
             navChannel = new Channel(CHAR_UUID, NavFrameEncoder.hello());
-            positionChannel = new Channel(POSITION_CHAR_UUID, PositionFrameEncoder.hello());
+            positionChannel = new Channel(POSITION_CHAR_UUID, PositionFrameEncoder.hello(), () -> {
+                PositionState p = lastPosition;
+                return p == null ? null : PositionFrameEncoder.encode(p);
+            });
             profileChannel = new Channel(PROFILE_CHAR_UUID, ProfileFrameEncoder.hello());
             channelsByCharUuid.put(CHAR_UUID, navChannel);
             channelsByCharUuid.put(POSITION_CHAR_UUID, positionChannel);
@@ -270,6 +297,7 @@ public class BikeComputerGattServer {
 
     public void stop() {
         running = false;
+        lastPosition = null;
         if (navChannel != null) mainHandler.removeCallbacks(navChannel.heartbeat);
         if (positionChannel != null) mainHandler.removeCallbacks(positionChannel.heartbeat);
         mainHandler.removeCallbacks(indicateTimeout);
@@ -333,6 +361,7 @@ public class BikeComputerGattServer {
     /** Called from GpsLink whenever a new GPS fix (or loss of fix) is ready. */
     public void updatePosition(PositionState state) {
         if (!running) return;
+        lastPosition = state;
         send(positionChannel, PositionFrameEncoder.encode(state));
     }
 
@@ -422,7 +451,7 @@ public class BikeComputerGattServer {
             indicateInFlight = false;
             inFlightChannel = null;
             byte[] retryFrame = pendingByChannel.remove(channel);
-            if (retryFrame == null) retryFrame = channel.lastFrame;
+            if (retryFrame == null) retryFrame = channel.currentFrame();
             beginSend(channel, retryFrame);
         }
     }
@@ -521,7 +550,7 @@ public class BikeComputerGattServer {
                 safeRespond(device, requestId, BluetoothGatt.GATT_FAILURE, offset, null);
                 return;
             }
-            byte[] value = channel.lastFrame;
+            byte[] value = channel.currentFrame();
             byte[] response = (offset > 0 && offset < value.length)
                     ? Arrays.copyOfRange(value, offset, value.length)
                     : value;
@@ -554,7 +583,7 @@ public class BikeComputerGattServer {
             if (enabling) {
                 // Don't make the ESP32 wait up to HEARTBEAT_INTERVAL_MS for
                 // its first frame.
-                send(channel, channel.lastFrame);
+                send(channel, channel.currentFrame());
             }
         }
 

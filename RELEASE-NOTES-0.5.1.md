@@ -2,7 +2,7 @@
 
 *[English version below.](#trailbridge-051----release-notes-english)*
 
-Gegenüber 0.5.0. Vorabversionen: `v0.5.1-rc1`, `v0.5.1-rc2`, `v0.5.1-rc3`. Abruf, OsmAnd-Import und -Start sind am
+Gegenüber 0.5.0. Vorabversionen: `v0.5.1-rc1`, `v0.5.1-rc2`, `v0.5.1-rc3`, `v0.5.1-rc4`. Abruf, OsmAnd-Import und -Start sind am
 Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weiter aus.
 
 ## Neu
@@ -39,6 +39,24 @@ Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weit
 - **Kürzere README** mit Verweis auf die Anleitung auf github.io; **englische Dokumentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
   BROUTER-VOICEHINTS und LANE-COUNT-BUG gibt es jetzt auch als `*.en.md`.
 
+## Behoben
+
+- **Alter des GPS-Fixes beim Heartbeat** (rc4). PROTOCOL.md verspricht, `FIX_AGE_MS` werde bei
+  jedem Senden neu berechnet; der Heartbeat schickte aber die Bytes des letzten Frames unverändert
+  noch einmal. Fällt das GPS aus (Tunnel), sah der BikeComputer so einen ewig frischen Fix und
+  bekam mit jedem Heartbeat eine falschere Zeit für seine Uhr angeboten. Jetzt wird der
+  Positions-Frame bei Heartbeat, Abonnieren und Lesen aus dem letzten Fix neu codiert.
+- **Fahrspur-Debug-Log** (rc4). `lane_debug.log` wuchs bei jeder Navigation um zwei Zeilen pro
+  Sekunde, ohne Grenze, auch im Release-Build. Jetzt schreiben nur Debug-Builds, nur bei einer
+  Änderung der Fahrspur-Daten, und die Datei beginnt bei 256 kB von vorn.
+- **OsmAnd-Bindung** (rc4). Lieferte `bindService` zwar Erfolg, meldete sich OsmAnd aber nie,
+  wurde die Bindung nie gelöst und "Erneut versuchen" band ein zweites Mal. Wird OsmAnd
+  aktualisiert, bindet TrailBridge jetzt von selbst neu.
+- **Leerlauf-Ende bei offener App** (rc4). Lief die Leerlaufzeit ab, während der Hauptscreen
+  offen war, blieb die alte Position kommentarlos stehen, und "Route starten" lief ohne GPS. Jetzt
+  steht "GPS: aus, lange nichts zu tun" im Status, und Route starten, Testfahrt oder ein
+  verbundener BikeComputer holen GPS und Benachrichtigung zurück.
+
 ## Hinweise
 
 - **Netz.** Das ist die erste Funktion, die das Netz nutzt (`INTERNET`). Sie ist aus, solange
@@ -63,7 +81,7 @@ Gerät ausprobiert; eine echte Fahrt mit den GPX-Funktionen der 0.5.0 steht weit
 
 # TrailBridge 0.5.1 -- Release Notes (English)
 
-Changes since 0.5.0. Pre-releases: `v0.5.1-rc1`, `v0.5.1-rc2`, `v0.5.1-rc3`. Fetching, the OsmAnd import and start have
+Changes since 0.5.0. Pre-releases: `v0.5.1-rc1`, `v0.5.1-rc2`, `v0.5.1-rc3`, `v0.5.1-rc4`. Fetching, the OsmAnd import and start have
 been tried on the device; a real ride with 0.5.0's GPX features is still to come.
 
 ## New
@@ -97,6 +115,24 @@ been tried on the device; a real ride with 0.5.0's GPX features is still to come
   the app starts the time over; open the app to carry on.
 - **Shorter README** pointing to the manual on github.io; **English documentation:** README, BUILD, FDROID, ROADMAP, DESIGN, FIRMWARE-OVERVIEW,
   BROUTER-VOICEHINTS and LANE-COUNT-BUG are now also available as `*.en.md`.
+
+## Fixed
+
+- **Age of the GPS fix on the heartbeat** (rc4). PROTOCOL.md promises that `FIX_AGE_MS` is
+  computed afresh on every send; the heartbeat, however, repeated the bytes of the last frame as
+  they were. When the GPS dropped out (tunnel), the BikeComputer saw a fix that stayed fresh for
+  ever and was offered an ever more wrong time for its clock with each heartbeat. The position
+  frame is now re-encoded from the last fix on heartbeat, subscription and read.
+- **Lane debug log** (rc4). `lane_debug.log` grew by two lines a second during every
+  navigation, without limit, in release builds too. Now only debug builds write it, only when the
+  lane data changes, and the file starts over at 256 kB.
+- **OsmAnd binding** (rc4). When `bindService` reported success but OsmAnd never answered, the
+  binding was never released and "Retry" bound a second time. When OsmAnd is updated, TrailBridge
+  now rebinds by itself.
+- **Idle stop with the app open** (rc4). When the idle time ran out while the main screen was
+  open, the old position stayed on without a word, and "Start route" ran without GPS. Now the status
+  reads "GPS: off, nothing to do for a while", and starting a route, a test ride or a connecting
+  BikeComputer bring GPS and the notification back.
 
 ## Notes
 

@@ -112,6 +112,10 @@ public class OsmAndLink {
     }
 
     public void start() {
+        // Bound already: a connection that was lost comes back by itself
+        // (BIND_AUTO_CREATE restarts OsmAnd's service), a second bindService()
+        // would only pile up a binding that stop() never releases.
+        if (bound) return;
         String pkg = findInstalledOsmAnd();
         if (pkg == null) {
             setStatus(Status.ERROR, appContext.getString(R.string.osmand_not_found));
@@ -120,8 +124,11 @@ public class OsmAndLink {
         osmandPackage = pkg;
         Intent intent = new Intent(SERVICE_ACTION);
         intent.setPackage(pkg);
-        boolean ok = appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        if (!ok) {
+        // The binding exists from the moment bindService() says yes, whether or
+        // not OsmAnd ever answers -- it is what stop() has to undo, so it is
+        // tracked here and not only once onServiceConnected arrives.
+        bound = appContext.bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        if (!bound) {
             setStatus(Status.ERROR, appContext.getString(R.string.osmand_bind_refused, pkg));
         } else {
             setStatus(Status.ATTENTION, appContext.getString(R.string.osmand_connecting, pkg));
@@ -160,17 +167,25 @@ public class OsmAndLink {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             iface = IOsmAndAidlInterface.Stub.asInterface(service);
-            bound = true;
             subscribe();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            bound = false;
+            // OsmAnd's process is gone; the binding stays (`bound`), and the
+            // system reconnects us once OsmAnd is back.
             subscribed = false;
             iface = null;
             mainHandler.removeCallbacks(pollTask);
             setStatus(Status.ERROR, appContext.getString(R.string.osmand_lost));
+        }
+
+        @Override
+        public void onBindingDied(ComponentName name) {
+            // OsmAnd was updated or removed: this binding will never come back
+            // on its own. Release it and bind anew.
+            stop();
+            start();
         }
     };
 
@@ -257,7 +272,7 @@ public class OsmAndLink {
         if (iface != null && !subscribed) {
             subscribe();
         } else if (iface == null) {
-            start();
+            start();   // does nothing while bound: the reconnect is the system's job
         }
     }
 
@@ -313,8 +328,7 @@ public class OsmAndLink {
         String nextName = turnInfo.getString("next_turn_name");
         int nextDistance = turnInfo.getInt("next_turn_distance", 0);
         String rawNextLanes = turnInfo.getString("next_turn_lanes");
-        Log.i(TAG, "raw next_turn_lanes=" + rawNextLanes);
-        appendDebugLog("next_turn_lanes=" + rawNextLanes);
+        logLanes("next_turn_lanes", rawNextLanes);
         List<Lane> lanes = parseLanes(rawNextLanes);
 
         // Note the missing underscore: OsmAnd really does write "after_next"
@@ -323,8 +337,7 @@ public class OsmAndLink {
         String afterName = turnInfo.getString("after_nextturn_name");
         int afterDistance = turnInfo.getInt("after_nextturn_distance", 0);
         String rawAfterLanes = turnInfo.getString("after_nextturn_lanes");
-        Log.i(TAG, "raw after_nextturn_lanes=" + rawAfterLanes);
-        appendDebugLog("after_nextturn_lanes=" + rawAfterLanes);
+        logLanes("after_nextturn_lanes", rawAfterLanes);
         List<Lane> afterLanes = parseLanes(rawAfterLanes);
 
         int maneuver = Maneuver.fromOsmAndXml(nextType);
@@ -380,19 +393,32 @@ public class OsmAndLink {
         return lanes;
     }
 
+    /** The raw lane strings as last logged, so that a poll that brings nothing new logs nothing. */
+    private final java.util.Map<String, String> loggedLanes = new java.util.HashMap<>();
+    /** Longer than this and the debug log starts over (a ride's worth of changes is a few kB). */
+    private static final long MAX_DEBUG_LOG_BYTES = 256 * 1024;
+
     /**
+     * Raw material for LANE-COUNT-BUG.md: the lane strings exactly as OsmAnd
+     * hands them over -- but only when they change, not once a second.
+     *
      * Logcat is unreliable on some devices (verified: nothing from this
      * app's process ever reaches `adb logcat` on the Telekom Lynx test
      * phone, despite the foreground service and USB debugging both being
-     * active) -- so mirror the raw lane strings into a plain file instead.
+     * active) -- so debug builds also mirror the strings into a plain file.
      * Read with `adb shell run-as com.euphi.trailbridge cat
-     * files/lane_debug.log` (debug builds only, run-as needs a debuggable
-     * app).
+     * files/lane_debug.log` (run-as needs a debuggable app). Release builds
+     * write no file: it would grow for as long as the app is installed.
      */
-    private void appendDebugLog(String line) {
+    private void logLanes(String key, String raw) {
+        String value = String.valueOf(raw);
+        if (value.equals(loggedLanes.put(key, value))) return;
+        Log.i(TAG, "raw " + key + "=" + value);
+        if (!BuildConfig.DEBUG) return;
         File f = new File(appContext.getFilesDir(), "lane_debug.log");
+        if (f.length() > MAX_DEBUG_LOG_BYTES && !f.delete()) return;
         try (FileWriter w = new FileWriter(f, true)) {
-            w.write(System.currentTimeMillis() + " " + line + "\n");
+            w.write(System.currentTimeMillis() + " " + key + "=" + value + "\n");
         } catch (IOException e) {
             Log.w(TAG, "debug log write failed", e);
         }

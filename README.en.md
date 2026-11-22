@@ -38,7 +38,8 @@ the route ahead on to the bike computer over BLE.
   (`INTERNET`); without an address it stays off.
 - **Energy saving:** TrailBridge ends itself (GPS off, notification gone) when no
   BikeComputer has been connected for 30 minutes (adjustable, also "Never"); in navi mode only if
-  you are not really moving either. Open the app to carry on.
+  you are not really moving either. Open the app to carry on; if it is still open, starting a
+  route or connecting the BikeComputer is enough.
 - **Test ride:** plays the loaded GPX as a fake position with simulated sensor values (always
   flagged as "simulated") -- for testing without a ride.
 - **Navi mode and mode selection:** a reduced screen for the road; the main screen shows

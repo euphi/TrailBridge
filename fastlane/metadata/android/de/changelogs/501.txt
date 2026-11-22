@@ -1,6 +1,6 @@
-• Geplante Routen: holt die im BikeLog-Dienst markierte Route (beim Start, dann alle 15 Min., nie während einer Navigation) und lädt sie
-• Legt sie auch in OsmAnds Track-Liste; "In OsmAnd starten" startet dort sofort die Navigation
-• Benachrichtigung, wenn eine Route ankommt
-• Netz nur mit eingetragener Dienst-Adresse
+• Geplante Routen: holt die im BikeLog-Dienst markierte Route (beim Start, dann alle 15 Min., nie während einer Navigation)
+• Legt sie auch in OsmAnds Track-Liste; „In OsmAnd starten“ startet dort sofort die Navigation
+• Meldung bei neuer Route; Netz nur mit eingetragener Adresse
 • GPX-Navigation: „geradeaus“ wird angezeigt
-• Energie sparen: beendet sich nach 30 Min. ohne BikeComputer selbst (GPS aus), einstellbar
+• Energie sparen: beendet sich nach 30 Min. ohne BikeComputer selbst, einstellbar
+• Fixes: Alter des GPS-Fixes, OsmAnd-Bindung, Leerlauf-Ende bei offener App

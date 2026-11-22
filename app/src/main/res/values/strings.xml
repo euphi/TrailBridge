@@ -91,6 +91,7 @@
     <string name="gps_no_provider">GPS: no GPS provider on this device</string>
     <string name="gps_provider_enabled">GPS: location service switched on, waiting for fix</string>
     <string name="gps_provider_disabled">GPS: location service switched off</string>
+    <string name="gps_idle_stopped">GPS: off, nothing to do for a while (open the app, start a route or connect the BikeComputer to carry on)</string>
 
     <string name="notifications_off_hint">Notifications are off: the relay keeps running in the background, but without the status notification and its Stop button. You can stop it in Android\'s list of active apps.</string>
     <string name="ble_permission_denied">Bluetooth permission denied -- the navigation relay cannot start.</string>

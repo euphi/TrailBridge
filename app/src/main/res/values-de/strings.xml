@@ -91,6 +91,7 @@
     <string name="gps_no_provider">GPS: kein GPS-Provider auf diesem Gerät</string>
     <string name="gps_provider_enabled">GPS: Ortungsdienst aktiviert, warte auf Fix</string>
     <string name="gps_provider_disabled">GPS: Ortungsdienst deaktiviert</string>
+    <string name="gps_idle_stopped">GPS: aus, lange nichts zu tun (zum Weiterfahren App öffnen, Route starten oder BikeComputer verbinden)</string>
 
     <string name="notifications_off_hint">Benachrichtigungen sind aus: Die Weitergabe läuft trotzdem im Hintergrund, nur ohne Status-Benachrichtigung und deren Beenden-Button. Beenden geht über die Liste aktiver Apps in Android.</string>
     <string name="ble_permission_denied">Bluetooth-Berechtigung verweigert -- die Navigationsweitergabe kann nicht starten.</string>

@@ -158,6 +158,9 @@ public class TrailBridgeService extends Service
 
     // ---- Selbst beenden bei Leerlauf (siehe IdleWatch) ----
     private IdleWatch idleWatch;
+    // Der Leerlauf hat den Dienst beendet, aber eine Activity haelt ihn noch gebunden am
+    // Leben: GPS und Benachrichtigung sind weg, bis etwas Sinnvolles passiert (resumeIfIdleStopped).
+    private boolean idleStopped = false;
 
     // ---- Geplante Routen (BikeLog) ----
     // Eigener Thread: ein haengendes Netz soll das Parsen einer GPX nicht aufhalten.
@@ -207,14 +210,21 @@ public class TrailBridgeService extends Service
             return START_NOT_STICKY;
         }
         if (intent != null && ACTION_IDLE_CHECK.equals(intent.getAction())) {
-            if (!started) {
-                // The alarm outlived the process: there is nothing running that could be idle.
-                stopSelf();
+            if (!started || idleStopped) {
+                // The alarm outlived the process (nothing is running that could be idle), or
+                // the service is already over and only still bound.
+                if (!started) stopSelf();
                 return START_NOT_STICKY;
             }
             // Not over yet (the rider came back, or the time was changed): the alarm goes on.
             if (!evaluateIdle()) scheduleIdleAlarm();
             return START_STICKY;
+        }
+        if (idleStopped) {
+            // Back from an idle stop (see resumeIfIdleStopped): the idle time starts over,
+            // else the alarm set below would fire at once and end the service again.
+            idleStopped = false;
+            idleWatch.restart(SystemClock.elapsedRealtime());
         }
         startForegroundNotification();
         if (!started) {
@@ -345,11 +355,32 @@ public class TrailBridgeService extends Service
             // Still bound (a screen is open), stopSelf alone would leave the notification and the GPS on.
             stopForeground(STOP_FOREGROUND_REMOVE);
             gpsLink.stop();
+            idleStopped = true;
+            // The screen that is open would otherwise show the last fix as if it were live.
+            onGpsStatusChanged(getString(R.string.gps_idle_stopped));
             stopSelf();
             return true;
         }
         if (changed) scheduleIdleAlarm();
         return false;
+    }
+
+    /**
+     * The idle stop ended GPS and the notification while a screen kept the service alive; now
+     * there is something to do again (a route is started, a BikeComputer connected): start the
+     * service properly once more. Goes through onStartCommand, like the app opening does, so
+     * the foreground notification, the GPS and the idle time come back the same way.
+     */
+    private void resumeIfIdleStopped() {
+        if (!idleStopped) return;
+        Log.i(TAG, "Something to do again after the idle stop: resuming");
+        try {
+            start(this);
+        } catch (IllegalStateException e) {
+            // Android 12+: no foreground start from the background. Only while a screen is
+            // open does the service survive its idle stop at all, so this is a rare race.
+            Log.w(TAG, "Could not resume the service after the idle stop", e);
+        }
     }
 
     /** Sends the profile to the BikeComputer (null: none any more) and mirrors it to the UI. */
@@ -429,6 +460,8 @@ public class TrailBridgeService extends Service
 
     /** Beginnt die Navigation entlang der geladenen Route (Position kommt von GpsLink). */
     public void startRoute() {
+        if (route == null) return;
+        resumeIfIdleStopped();
         startNavigation(true);
     }
 
@@ -481,6 +514,7 @@ public class TrailBridgeService extends Service
         RoutePlayer p = player;
         if (p == null) return;
         if (!playbackActive) {
+            resumeIfIdleStopped();
             playbackActive = true;
             playbackPlaying = true;
             playbackLastTickMs = SystemClock.elapsedRealtime();
@@ -976,6 +1010,7 @@ public class TrailBridgeService extends Service
     @Override
     public void onSubscriberCountChanged(int count) {
         lastSubscriberCount = count;
+        if (count > 0) resumeIfIdleStopped();
         evaluateIdle();
         if (uiListener != null) uiListener.onSubscriberCountChanged(count);
     }

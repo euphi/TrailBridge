@@ -15,7 +15,7 @@ android {
         // neue Versionen über die Tags und prüft genau diese beiden Werte --
         // vor jedem Release-Tag hier hochzählen, siehe FDROID.md.
         versionCode 501
-        versionName "0.5.1-rc3"
+        versionName "0.5.1-rc4"
     }
 
     // Kein von Google verschlüsselter Abhängigkeits-Blob in der APK -- F-Droid
@@ -27,6 +27,9 @@ android {
 
     buildFeatures {
         aidl true
+        // BuildConfig.DEBUG schaltet das Fahrspur-Debug-Log in OsmAndLink (AGP 8 erzeugt die
+        // Klasse nicht mehr von sich aus).
+        buildConfig true
     }
 
     // Release-Signing kommt aus Umgebungsvariablen statt aus eingecheckten
